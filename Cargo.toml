@@ -16,6 +16,7 @@ required-features = ["server"]
 default = ["server", "sqlite"]
 server = ["axum", "tokio", "tower", "tower-http", "futures", "tokio-stream", "tracing", "tracing-subscriber", "clap"]
 sqlite = ["sqlx", "server"]
+wasm = []  # For WASM targets, removes Send + Sync bounds from Database trait
 
 [dependencies]
 # Always available (core domain logic)

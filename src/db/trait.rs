@@ -20,7 +20,8 @@ pub enum DbError {
 
 pub type DbResult<T> = Result<T, DbError>;
 
-#[async_trait]
+#[cfg_attr(not(feature = "wasm"), async_trait)]
+#[cfg_attr(feature = "wasm", async_trait(?Send))]
 pub trait Database: Send + Sync {
     // ===== Market Operations =====
 
