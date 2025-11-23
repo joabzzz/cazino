@@ -54,7 +54,6 @@ fn create_router<D: Database + Clone + Send + Sync + 'static>(state: AppState<D>
     Router::new()
         // Serve static UI files
         .nest_service("/", ServeDir::new("ui"))
-
         // WebSocket endpoint
         .route("/ws", get(ws_handler))
         // Market routes

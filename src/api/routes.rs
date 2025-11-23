@@ -29,8 +29,8 @@ pub async fn create_market<D: Database + 'static>(
 ) -> Result<Json<CreateMarketResponse>, ApiError> {
     tracing::info!("📊 Creating market: '{}'", req.name);
 
-    // Generate a device ID for the admin (in real app, this comes from cookie)
-    let device_id = Uuid::new_v4().to_string();
+    // Use provided device_id or generate a new one
+    let device_id = req.device_id.unwrap_or_else(|| Uuid::new_v4().to_string());
 
     let (market, user) = state
         .service
@@ -80,8 +80,8 @@ pub async fn join_market<D: Database + 'static>(
         invite_code
     );
 
-    // Generate device ID (in real app, this comes from cookie)
-    let device_id = Uuid::new_v4().to_string();
+    // Use provided device_id or generate a new one
+    let device_id = req.device_id.unwrap_or_else(|| Uuid::new_v4().to_string());
 
     let (market, user) = state
         .service
@@ -221,7 +221,6 @@ pub async fn create_bet<D: Database + 'static>(
             creator_id,
             req.subject_user_id,
             req.description.clone(),
-            req.resolution_criteria,
             req.initial_odds,
             req.opening_wager,
         )

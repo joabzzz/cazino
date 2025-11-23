@@ -47,6 +47,18 @@ pub enum BetStatus {
     Active,      // Open for betting
     ResolvedYes, // Outcome: YES
     ResolvedNo,  // Outcome: NO
+    Challenged,  // Under dispute
+}
+
+/// Challenge status
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+#[allow(dead_code)]
+pub enum ChallengeStatus {
+    Active,    // Challenge is ongoing
+    Accepted,  // Resolver matched/raised
+    Withdrawn, // Resolver withdrew
+    Resolved,  // Dispute settled
 }
 
 /// A prediction bet about a user
@@ -57,8 +69,7 @@ pub struct Bet {
     pub subject_user_id: Uuid, // Who the bet is about
     pub created_by: Uuid,      // User ID who created it
     pub description: String,   // "Dad falls asleep during movie"
-    pub resolution_criteria: String,
-    pub initial_odds: String, // e.g., "3:1" - for display only
+    pub initial_odds: String,  // e.g., "3:1" - for display only
     pub status: BetStatus,
     pub yes_pool: i64, // Total coins bet on YES
     pub no_pool: i64,  // Total coins bet on NO
@@ -90,6 +101,22 @@ pub struct Wager {
     pub probability_after: f64, // YES probability as decimal (0.0-1.0)
 }
 
+/// A challenge to a bet resolution
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
+pub struct Challenge {
+    pub id: Uuid,
+    pub bet_id: Uuid,
+    pub challenger_id: Uuid,   // Who initiated the challenge
+    pub resolver_id: Uuid,     // Who resolved the bet (being challenged)
+    pub challenger_stake: i64, // Current challenger stake
+    pub resolver_stake: i64,   // Current resolver stake (must match)
+    pub status: ChallengeStatus,
+    pub created_at: DateTime<Utc>,
+    pub resolved_at: Option<DateTime<Utc>>,
+    pub winner_id: Option<Uuid>, // Set when resolved
+}
+
 /// View model: Bet with visibility filtering applied
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BetView {
@@ -102,7 +129,6 @@ pub struct BetView {
     // If hidden, these fields are redacted
     pub subject_user_id: Option<Uuid>,
     pub description: Option<String>,
-    pub resolution_criteria: Option<String>,
 
     // Always visible
     pub created_by: Uuid,
@@ -119,7 +145,8 @@ impl Bet {
     pub fn to_view(&self, viewing_user_id: Uuid) -> BetView {
         let is_hidden = self.subject_user_id == viewing_user_id
             && self.status != BetStatus::ResolvedYes
-            && self.status != BetStatus::ResolvedNo;
+            && self.status != BetStatus::ResolvedNo
+            && self.status != BetStatus::Challenged;
 
         BetView {
             id: self.id,
@@ -134,11 +161,6 @@ impl Bet {
                 None
             } else {
                 Some(self.description.clone())
-            },
-            resolution_criteria: if is_hidden {
-                None
-            } else {
-                Some(self.resolution_criteria.clone())
             },
             created_by: self.created_by,
             initial_odds: self.initial_odds.clone(),

@@ -102,7 +102,6 @@ impl<D: Database> CazinoService<D> {
         creator_id: Uuid,
         subject_user_id: Uuid,
         description: String,
-        resolution_criteria: String,
         initial_odds: String,
         opening_wager: i64,
     ) -> DbResult<Bet> {
@@ -123,9 +122,8 @@ impl<D: Database> CazinoService<D> {
             subject_user_id,
             created_by: creator_id,
             description,
-            resolution_criteria,
             initial_odds,
-            status: BetStatus::Pending,
+            status: BetStatus::Active,
             yes_pool,
             no_pool,
             created_at: Utc::now(),

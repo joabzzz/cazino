@@ -174,7 +174,6 @@ mod tests {
             subject_user_id: subject_id,
             created_by: Uuid::new_v4(),
             description: "Test bet".to_string(),
-            resolution_criteria: "Test criteria".to_string(),
             initial_odds: "1:1".to_string(),
             status: BetStatus::Active,
             yes_pool: 0,

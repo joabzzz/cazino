@@ -50,7 +50,6 @@ impl SqliteDatabase {
                 subject_user_id TEXT NOT NULL,
                 created_by TEXT NOT NULL,
                 description TEXT NOT NULL,
-                resolution_criteria TEXT NOT NULL,
                 initial_odds TEXT NOT NULL,
                 status TEXT NOT NULL,
                 yes_pool INTEGER NOT NULL,
@@ -118,6 +117,7 @@ fn serialize_bet_status(status: BetStatus) -> String {
         BetStatus::Active => "active".to_string(),
         BetStatus::ResolvedYes => "resolved_yes".to_string(),
         BetStatus::ResolvedNo => "resolved_no".to_string(),
+        BetStatus::Challenged => "challenged".to_string(),
     }
 }
 
@@ -127,6 +127,7 @@ fn deserialize_bet_status(s: &str) -> BetStatus {
         "active" => BetStatus::Active,
         "resolved_yes" => BetStatus::ResolvedYes,
         "resolved_no" => BetStatus::ResolvedNo,
+        "challenged" => BetStatus::Challenged,
         _ => BetStatus::Pending,
     }
 }
@@ -335,8 +336,8 @@ impl Database for SqliteDatabase {
     async fn create_bet(&self, bet: Bet) -> DbResult<Bet> {
         sqlx::query(
             r#"
-            INSERT INTO bets (id, market_id, subject_user_id, created_by, description, resolution_criteria, initial_odds, status, yes_pool, no_pool, created_at, resolved_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO bets (id, market_id, subject_user_id, created_by, description, initial_odds, status, yes_pool, no_pool, created_at, resolved_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             "#,
         )
         .bind(bet.id.to_string())
@@ -344,7 +345,6 @@ impl Database for SqliteDatabase {
         .bind(bet.subject_user_id.to_string())
         .bind(bet.created_by.to_string())
         .bind(&bet.description)
-        .bind(&bet.resolution_criteria)
         .bind(&bet.initial_odds)
         .bind(serialize_bet_status(bet.status))
         .bind(bet.yes_pool)
@@ -371,7 +371,6 @@ impl Database for SqliteDatabase {
             subject_user_id: Uuid::parse_str(row.get("subject_user_id")).unwrap(),
             created_by: Uuid::parse_str(row.get("created_by")).unwrap(),
             description: row.get("description"),
-            resolution_criteria: row.get("resolution_criteria"),
             initial_odds: row.get("initial_odds"),
             status: deserialize_bet_status(row.get("status")),
             yes_pool: row.get("yes_pool"),
@@ -400,7 +399,6 @@ impl Database for SqliteDatabase {
                 subject_user_id: Uuid::parse_str(row.get("subject_user_id")).unwrap(),
                 created_by: Uuid::parse_str(row.get("created_by")).unwrap(),
                 description: row.get("description"),
-                resolution_criteria: row.get("resolution_criteria"),
                 initial_odds: row.get("initial_odds"),
                 status: deserialize_bet_status(row.get("status")),
                 yes_pool: row.get("yes_pool"),
@@ -443,7 +441,6 @@ impl Database for SqliteDatabase {
                 subject_user_id: Uuid::parse_str(row.get("subject_user_id")).unwrap(),
                 created_by: Uuid::parse_str(row.get("created_by")).unwrap(),
                 description: row.get("description"),
-                resolution_criteria: row.get("resolution_criteria"),
                 initial_odds: row.get("initial_odds"),
                 status: deserialize_bet_status(row.get("status")),
                 yes_pool: row.get("yes_pool"),
@@ -573,7 +570,6 @@ impl Database for SqliteDatabase {
                 subject_user_id: Uuid::parse_str(row.get("subject_user_id")).unwrap(),
                 created_by: Uuid::parse_str(row.get("created_by")).unwrap(),
                 description: row.get("description"),
-                resolution_criteria: row.get("resolution_criteria"),
                 initial_odds: row.get("initial_odds"),
                 status: deserialize_bet_status(row.get("status")),
                 yes_pool: row.get("yes_pool"),

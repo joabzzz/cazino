@@ -16,6 +16,15 @@ const state = {
 };
 
 // ===== Utility Functions =====
+function getDeviceFingerprint() {
+  let fingerprint = localStorage.getItem("cazino_device_id");
+  if (!fingerprint) {
+    fingerprint = crypto.randomUUID();
+    localStorage.setItem("cazino_device_id", fingerprint);
+  }
+  return fingerprint;
+}
+
 function showScreen(screenId) {
   document
     .querySelectorAll(".screen")
@@ -36,7 +45,7 @@ function showError(message) {
 }
 
 function formatBalance(balance) {
-  return balance.toLocaleString();
+  return `Z$${balance.toLocaleString()}`;
 }
 
 // ===== API Functions =====
@@ -121,10 +130,6 @@ function handleWebSocketMessage(message) {
       loadBets();
       break;
 
-    case "bet_approved":
-      loadBets();
-      break;
-
     case "wager_placed":
       loadBets();
       updateUserBalance();
@@ -152,7 +157,10 @@ function handleWebSocketMessage(message) {
 
 // ===== Market Functions =====
 async function createMarket() {
-  const adminName = document.getElementById("admin-name").value;
+  const adminName = document
+    .getElementById("admin-name")
+    .value.trim()
+    .toLowerCase();
   const name = document.getElementById("market-name").value;
   const duration = parseInt(document.getElementById("duration").value);
   const startingBalance = parseInt(
@@ -167,6 +175,7 @@ async function createMarket() {
         admin_name: adminName,
         duration_hours: duration,
         starting_balance: startingBalance,
+        device_id: getDeviceFingerprint(),
       }),
     });
 
@@ -183,7 +192,10 @@ async function createMarket() {
 
 async function joinMarket() {
   const inviteCode = document.getElementById("invite-code").value.toUpperCase();
-  const displayName = document.getElementById("display-name").value;
+  const displayName = document
+    .getElementById("display-name")
+    .value.trim()
+    .toLowerCase();
 
   try {
     const result = await apiCall(`/markets/${inviteCode}/join`, {
@@ -191,6 +203,7 @@ async function joinMarket() {
       body: JSON.stringify({
         display_name: displayName,
         avatar: "👤",
+        device_id: getDeviceFingerprint(),
       }),
     });
 
@@ -251,21 +264,32 @@ async function loadBets() {
     );
     state.bets = bets;
     renderBets();
-    renderPendingBets();
+    renderFeed();
   } catch (error) {
     console.error("Failed to load bets:", error);
   }
 }
 
 async function createBet() {
-  const subjectId = document.getElementById("bet-subject").value;
   const description = document.getElementById("bet-description").value;
-  const criteria = document.getElementById("bet-criteria").value;
   const odds = document.getElementById("bet-odds").value;
   const wager = parseInt(document.getElementById("opening-wager").value);
 
-  if (!subjectId) {
-    showError("Please select who the bet is about");
+  // Parse @username from description
+  const mentionMatch = description.match(/@([a-zA-Z0-9_]+)/);
+  if (!mentionMatch) {
+    showError("Please include @username in the bet description");
+    return;
+  }
+
+  const username = mentionMatch[1].toLowerCase();
+
+  // Find user by username
+  const subjectUser = state.users.find(
+    (u) => u.display_name.toLowerCase() === username,
+  );
+  if (!subjectUser) {
+    showError(`User @${username} not found in this market`);
     return;
   }
 
@@ -273,9 +297,8 @@ async function createBet() {
     await apiCall(`/markets/${state.market.id}/bets/${state.user.id}/create`, {
       method: "POST",
       body: JSON.stringify({
-        subject_user_id: subjectId,
+        subject_user_id: subjectUser.id,
         description,
-        resolution_criteria: criteria,
         initial_odds: odds,
         opening_wager: wager,
       }),
@@ -285,18 +308,6 @@ async function createBet() {
     document.getElementById("create-bet-form").reset();
     await loadBets();
     await updateUserBalance();
-  } catch (error) {
-    showError(error.message);
-  }
-}
-
-async function approveBet(betId) {
-  try {
-    await apiCall(`/bets/${betId}/approve/${state.user.id}`, {
-      method: "POST",
-    });
-
-    await loadBets();
   } catch (error) {
     showError(error.message);
   }
@@ -392,7 +403,8 @@ function showLobby() {
 }
 
 function showMarket() {
-  document.getElementById("market-name").textContent = state.market.name;
+  document.getElementById("market-name-display").textContent =
+    state.market.name;
   document.getElementById("market-status").textContent = state.market.status;
   document.getElementById("user-balance").textContent = formatBalance(
     state.user.balance,
@@ -431,7 +443,7 @@ function renderPlayerList() {
     .map(
       (user) => `
         <li>
-            <span class="player-name">${user.display_name}</span>
+            <span class="player-name">@${user.display_name}</span>
             ${user.is_admin ? '<span class="player-badge">Admin</span>' : ""}
         </li>
     `,
@@ -497,40 +509,6 @@ function renderBets() {
     .join("");
 }
 
-function renderPendingBets() {
-  if (!state.user.is_admin) return;
-
-  const pendingBets = state.bets.filter((bet) => bet.status === "pending");
-  const section = document.getElementById("pending-bets-section");
-  const list = document.getElementById("pending-bets-list");
-
-  if (pendingBets.length === 0) {
-    section.style.display = "none";
-    return;
-  }
-
-  section.style.display = "block";
-  list.innerHTML = pendingBets
-    .map(
-      (bet) => `
-        <div class="bet-card">
-            <div class="bet-header">
-                <div>
-                    <div class="bet-description">${bet.description}</div>
-                    <div class="bet-subject">About ${getUserName(bet.subject_user_id)}</div>
-                </div>
-                <span class="bet-status-badge pending">Pending</span>
-            </div>
-
-            <div class="bet-actions">
-                <button class="btn btn-small btn-primary" onclick="approveBet('${bet.id}')">Approve</button>
-            </div>
-        </div>
-    `,
-    )
-    .join("");
-}
-
 function renderLeaderboard() {
   const list = document.getElementById("leaderboard-list");
 
@@ -544,7 +522,7 @@ function renderLeaderboard() {
       (item) => `
         <div class="leaderboard-item">
             <div class="leaderboard-rank">#${item.rank}</div>
-            <div class="leaderboard-name">${item.user.display_name}</div>
+            <div class="leaderboard-name">@${item.user.display_name}</div>
             <div>
                 <span class="leaderboard-balance">${formatBalance(item.user.balance)}</span>
                 <span class="leaderboard-profit ${item.profit >= 0 ? "positive" : "negative"}">
@@ -595,10 +573,105 @@ function renderReveal(bets) {
     .join("");
 }
 
+function renderFeed() {
+  const list = document.getElementById("feed-list");
+
+  // Generate feed events from bets
+  const feedEvents = [];
+
+  state.bets.forEach((bet) => {
+    // Add bet creation event
+    const isBetAboutMe = bet.subject_user_id === state.user.id;
+    const betDescription =
+      isBetAboutMe && !bet.is_hidden
+        ? bet.description
+        : isBetAboutMe
+          ? "[Hidden bet about you]"
+          : bet.description;
+
+    feedEvents.push({
+      type: "bet_created",
+      timestamp: new Date(bet.created_at),
+      creator: getUserName(bet.created_by),
+      description: betDescription,
+      amount: bet.yes_pool + bet.no_pool,
+      bet: bet,
+    });
+
+    // Add resolution event if resolved
+    if (bet.status === "resolved_yes" || bet.status === "resolved_no") {
+      feedEvents.push({
+        type: "bet_resolved",
+        timestamp: new Date(bet.resolved_at),
+        bet: bet,
+        outcome: bet.status === "resolved_yes" ? "YES" : "NO",
+        description: betDescription,
+      });
+    }
+  });
+
+  // Sort by timestamp (newest first)
+  feedEvents.sort((a, b) => b.timestamp - a.timestamp);
+
+  if (feedEvents.length === 0) {
+    list.innerHTML = '<div class="empty-state">No activity yet</div>';
+    return;
+  }
+
+  list.innerHTML = feedEvents
+    .map((event) => {
+      if (event.type === "bet_created") {
+        return `
+        <div class="feed-item">
+          <div class="feed-item-header">
+            ${event.creator} placed ${formatBalance(event.amount)} on ${event.description.includes("[Hidden") ? '<span class="feed-masked">[Hidden bet]</span>' : event.description}
+          </div>
+          <div class="feed-item-details">${formatTimestamp(event.timestamp)}</div>
+        </div>
+      `;
+      } else if (event.type === "bet_resolved") {
+        return `
+        <div class="feed-item">
+          <div class="feed-item-header" style="font-weight: 700;">
+            ${getUserName(event.bet.created_by)} validated ${event.description} - ${event.outcome}
+          </div>
+          <div class="feed-item-details">${formatTimestamp(event.timestamp)}</div>
+          ${renderWinnings(event.bet)}
+        </div>
+      `;
+      }
+    })
+    .join("");
+}
+
+function renderWinnings(bet) {
+  // This would need actual wager data from the backend
+  // For now, show a placeholder
+  return `
+    <div class="feed-item-winnings">
+      <div class="winner">
+        <span>Payouts calculated</span>
+      </div>
+    </div>
+  `;
+}
+
+function formatTimestamp(date) {
+  const now = new Date();
+  const diff = now - date;
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  return date.toLocaleDateString();
+}
+
 // ===== Helper Functions =====
 function getUserName(userId) {
   const user = state.users.find((u) => u.id === userId);
-  return user ? user.display_name : "Unknown";
+  return user ? `@${user.display_name}` : "@unknown";
 }
 
 function calculateProbability(yesPool, noPool) {
@@ -622,17 +695,6 @@ function openWagerModal(betId) {
     `${((1 - calculateProbability(bet.yes_pool, bet.no_pool)) * 100).toFixed(1)}%`;
 
   showModal("wager-modal");
-}
-
-function populateBetSubjects() {
-  const select = document.getElementById("bet-subject");
-  const otherUsers = state.users.filter((u) => u.id !== state.user.id);
-
-  select.innerHTML =
-    '<option value="">Select a player...</option>' +
-    otherUsers
-      .map((user) => `<option value="${user.id}">${user.display_name}</option>`)
-      .join("");
 }
 
 // ===== Event Handlers =====
@@ -666,7 +728,6 @@ document.getElementById("open-market-btn").addEventListener("click", () => {
 });
 
 document.getElementById("create-bet-btn").addEventListener("click", () => {
-  populateBetSubjects();
   showModal("create-bet-modal");
 });
 

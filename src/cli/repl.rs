@@ -234,14 +234,13 @@ Examples:
                 user_id,
                 subject_id,
                 description.to_string(),
-                "See what happens".to_string(),
                 odds.to_string(),
                 amount,
             )
             .await
         {
             Ok(bet) => {
-                println!("✅ Bet created (pending approval)");
+                println!("✅ Bet created and active");
                 println!("   ID: {}", bet.id);
                 println!("   Description: {}", bet.description);
             }

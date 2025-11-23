@@ -12,6 +12,7 @@ pub struct CreateMarketRequest {
     pub duration_hours: i64,
     #[serde(default = "default_starting_balance")]
     pub starting_balance: i64,
+    pub device_id: Option<String>,
 }
 
 fn default_starting_balance() -> i64 {
@@ -22,13 +23,13 @@ fn default_starting_balance() -> i64 {
 pub struct JoinMarketRequest {
     pub display_name: String,
     pub avatar: String,
+    pub device_id: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct CreateBetRequest {
     pub subject_user_id: Uuid,
     pub description: String,
-    pub resolution_criteria: String,
     pub initial_odds: String,
     pub opening_wager: i64,
 }

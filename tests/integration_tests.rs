@@ -71,25 +71,19 @@ async fn test_full_market_lifecycle() {
             alice.id,
             bob.id,
             "Bob will fall asleep".to_string(),
-            "Visual confirmation".to_string(),
             "1:1".to_string(),
             100,
         )
         .await
         .unwrap();
 
-    assert_eq!(bet.status, BetStatus::Pending);
+    assert_eq!(bet.status, BetStatus::Active);
     assert_eq!(bet.yes_pool, 100);
     assert_eq!(bet.no_pool, 0);
 
     // Alice's balance should be reduced
     let alice = service.get_user(alice.id).await.unwrap();
     assert_eq!(alice.balance, 900);
-
-    // 5. Approve bet
-    service.approve_bet(bet.id, admin.id).await.unwrap();
-    let bet = service.get_bet(bet.id).await.unwrap();
-    assert_eq!(bet.status, BetStatus::Active);
 
     // 6. Admin places wager
     let wager = service
@@ -173,7 +167,6 @@ async fn test_hidden_bet_mechanics() {
             alice.id,
             bob.id,
             "Bob secret bet".to_string(),
-            "Criteria".to_string(),
             "1:1".to_string(),
             100,
         )
@@ -268,7 +261,6 @@ async fn test_parimutuel_payout_calculation() {
             admin.id,
             alice.id,
             "Test bet".to_string(),
-            "Criteria".to_string(),
             "1:1".to_string(),
             100,
         )
@@ -366,7 +358,6 @@ async fn test_insufficient_balance() {
             alice.id,
             admin.id,
             "Expensive bet".to_string(),
-            "Criteria".to_string(),
             "1:1".to_string(),
             200, // More than her 100 balance
         )
@@ -410,7 +401,6 @@ async fn test_probability_chart_tracking() {
             admin.id,
             alice.id,
             "Chart bet".to_string(),
-            "Criteria".to_string(),
             "1:1".to_string(),
             100,
         )
@@ -481,7 +471,6 @@ async fn test_admin_only_actions() {
             alice.id,
             admin.id,
             "Admin bet".to_string(),
-            "Criteria".to_string(),
             "1:1".to_string(),
             100,
         )
@@ -591,7 +580,6 @@ async fn test_multiple_bets_same_subject() {
             admin.id,
             alice.id,
             "Alice will be late".to_string(),
-            "Criteria 1".to_string(),
             "1:1".to_string(),
             50,
         )
@@ -604,7 +592,6 @@ async fn test_multiple_bets_same_subject() {
             admin.id,
             alice.id,
             "Alice will spill drink".to_string(),
-            "Criteria 2".to_string(),
             "1:1".to_string(),
             50,
         )

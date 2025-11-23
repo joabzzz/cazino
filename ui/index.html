@@ -31,13 +31,22 @@
 
                 <form id="create-market-form">
                     <div class="form-group">
-                        <label for="admin-name">Your Name</label>
+                        <label for="admin-name">Your Username</label>
                         <input
                             type="text"
                             id="admin-name"
-                            placeholder="e.g., Alice"
+                            placeholder="e.g., alice, dad, mom2"
                             required
+                            pattern="[a-zA-Z0-9_]+"
                         />
+                        <small
+                            style="
+                                color: var(--gray-500);
+                                margin-top: 4px;
+                                display: block;
+                            "
+                            >Letters, numbers, and underscores only</small
+                        >
                     </div>
 
                     <div class="form-group">
@@ -64,7 +73,7 @@
 
                     <div class="form-group">
                         <label for="starting-balance"
-                            >Starting Balance (coins)</label
+                            >Starting Balance (Z$)</label
                         >
                         <input
                             type="number"
@@ -111,13 +120,22 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="display-name">Your Name</label>
+                        <label for="display-name">Your Username</label>
                         <input
                             type="text"
                             id="display-name"
-                            placeholder="e.g., Bob"
+                            placeholder="e.g., bob, sister1, uncle"
                             required
+                            pattern="[a-zA-Z0-9_]+"
                         />
+                        <small
+                            style="
+                                color: var(--gray-500);
+                                margin-top: 4px;
+                                display: block;
+                            "
+                            >Letters, numbers, and underscores only</small
+                        >
                     </div>
 
                     <div class="button-group">
@@ -181,22 +199,22 @@
             <div class="container">
                 <div class="header-bar">
                     <div>
-                        <h2 id="market-name">Market Name</h2>
+                        <h2 id="market-name-display">Market Name</h2>
                         <p class="status">
                             Status: <span id="market-status">Open</span>
                         </p>
                     </div>
                     <div class="user-info">
-                        <span id="user-balance">1000</span> coins
+                        <span id="user-balance">Z$1000</span>
                     </div>
                 </div>
 
                 <div class="tabs">
                     <button class="tab active" data-tab="bets">Bets</button>
+                    <button class="tab" data-tab="feed">Feed</button>
                     <button class="tab" data-tab="leaderboard">
                         Leaderboard
                     </button>
-                    <button class="tab" data-tab="reveal">Reveal</button>
                 </div>
 
                 <!-- Bets Tab -->
@@ -210,14 +228,13 @@
                         </div>
                         <div id="bets-list" class="bets-list"></div>
                     </div>
+                </div>
 
-                    <div
-                        id="pending-bets-section"
-                        class="section admin-section"
-                        style="display: none"
-                    >
-                        <h3>Pending Approval</h3>
-                        <div id="pending-bets-list" class="bets-list"></div>
+                <!-- Feed Tab -->
+                <div id="feed-tab" class="tab-content">
+                    <div class="section">
+                        <h3>Activity Feed</h3>
+                        <div id="feed-list" class="feed-list"></div>
                     </div>
                 </div>
 
@@ -248,30 +265,22 @@
                 <h3>Create Bet</h3>
                 <form id="create-bet-form">
                     <div class="form-group">
-                        <label for="bet-subject">About Who?</label>
-                        <select id="bet-subject" required>
-                            <option value="">Select a player...</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="bet-description">Description</label>
+                        <label for="bet-description">Bet Description</label>
                         <input
                             type="text"
                             id="bet-description"
-                            placeholder="e.g., Will Bob eat dessert first?"
+                            placeholder="e.g., @bob will eat dessert first"
                             required
                         />
-                    </div>
-
-                    <div class="form-group">
-                        <label for="bet-criteria">Resolution Criteria</label>
-                        <input
-                            type="text"
-                            id="bet-criteria"
-                            placeholder="How will this be determined?"
-                            required
-                        />
+                        <small
+                            style="
+                                color: var(--gray-500);
+                                margin-top: 4px;
+                                display: block;
+                            "
+                            >Include @username to specify who the bet is
+                            about</small
+                        >
                     </div>
 
                     <div class="form-group">
