@@ -37,7 +37,7 @@ pub async fn create_market<D: Database + 'static>(
         .create_market(
             req.name.clone(),
             device_id,
-            "Admin".to_string(),
+            req.admin_name.clone(),
             "👑".to_string(),
             req.starting_balance,
             req.duration_hours,
@@ -93,6 +93,16 @@ pub async fn join_market<D: Database + 'static>(
         req.display_name,
         market.name,
         market.id
+    );
+
+    // Broadcast user joined
+    broadcast(
+        &state.broadcast_tx,
+        WsMessage::UserJoined {
+            user_id: user.id,
+            display_name: user.display_name.clone(),
+            market_id: market.id,
+        },
     );
 
     Ok(Json(JoinMarketResponse { market, user }))

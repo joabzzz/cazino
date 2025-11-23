@@ -30,6 +30,18 @@ cargo run --release -- serve
 
 Server starts on `http://localhost:3000`
 
+### Using the Web UI
+
+Open your browser and navigate to `http://localhost:3000`
+
+The minimalist monochrome interface will guide you through:
+1. **Create a market** or **join with an invite code**
+2. **Wait in the lobby** until admin opens the market
+3. **Create bets** about other players (they won't see bets about themselves!)
+4. **Place wagers** on active bets with real-time odds
+5. **Watch the leaderboard** as fortunes change
+6. **Reveal** bets about you after they're resolved
+
 ## Testing
 
 ### Run Unit & Integration Tests

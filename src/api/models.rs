@@ -8,6 +8,7 @@ use uuid::Uuid;
 #[derive(Debug, Deserialize)]
 pub struct CreateMarketRequest {
     pub name: String,
+    pub admin_name: String,
     pub duration_hours: i64,
     #[serde(default = "default_starting_balance")]
     pub starting_balance: i64,
@@ -128,6 +129,13 @@ pub enum WsMessage {
 
     #[serde(rename = "bet_approved")]
     BetApproved { bet_id: Uuid },
+
+    #[serde(rename = "user_joined")]
+    UserJoined {
+        user_id: Uuid,
+        display_name: String,
+        market_id: Uuid,
+    },
 
     #[serde(rename = "wager_placed")]
     WagerPlaced {

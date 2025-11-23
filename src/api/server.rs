@@ -11,6 +11,7 @@ use axum::{
 };
 use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
+use tower_http::services::ServeDir;
 use tower_http::trace::TraceLayer;
 
 /// Run the HTTP + WebSocket server
@@ -51,6 +52,9 @@ where
 
 fn create_router<D: Database + Clone + Send + Sync + 'static>(state: AppState<D>) -> Router {
     Router::new()
+        // Serve static UI files
+        .nest_service("/", ServeDir::new("ui"))
+
         // WebSocket endpoint
         .route("/ws", get(ws_handler))
         // Market routes
