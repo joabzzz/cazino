@@ -1,7 +1,7 @@
 /// Interactive CLI for testing Cazino locally
 use crate::db::SqliteDatabase;
 use crate::domain::models::Side;
-use crate::service::CazinoService;
+use crate::service::{CazinoService, CreateMarketParams};
 use std::io::{self, Write};
 use uuid::Uuid;
 
@@ -117,15 +117,15 @@ Examples:
 
         match self
             .service
-            .create_market(
-                name.clone(),
-                "cli-admin".to_string(),
-                "Admin".to_string(),
-                "👑".to_string(),
-                1000,
-                hours,
-                None,
-            )
+            .create_market(CreateMarketParams {
+                name: name.clone(),
+                admin_device_id: "cli-admin".to_string(),
+                admin_name: "Admin".to_string(),
+                admin_avatar: "👑".to_string(),
+                starting_balance: 1000,
+                duration_hours: hours,
+                custom_invite_code: None,
+            })
             .await
         {
             Ok((market, user)) => {
@@ -237,6 +237,7 @@ Examples:
                 description.to_string(),
                 odds.to_string(),
                 amount,
+                false, // hide_from_subject - default to visible in CLI
             )
             .await
         {

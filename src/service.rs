@@ -7,6 +7,17 @@ use chrono::Utc;
 use std::sync::Arc;
 use uuid::Uuid;
 
+/// Parameters for creating a new market
+pub struct CreateMarketParams {
+    pub name: String,
+    pub admin_device_id: String,
+    pub admin_name: String,
+    pub admin_avatar: String,
+    pub starting_balance: i64,
+    pub duration_hours: i64,
+    pub custom_invite_code: Option<String>,
+}
+
 pub struct CazinoService<D: Database> {
     db: Arc<D>,
 }
@@ -17,39 +28,31 @@ impl<D: Database> CazinoService<D> {
     }
 
     /// Create a new market
-    pub async fn create_market(
-        &self,
-        name: String,
-        admin_device_id: String,
-        admin_name: String,
-        admin_avatar: String,
-        starting_balance: i64,
-        duration_hours: i64,
-        custom_invite_code: Option<String>,
-    ) -> DbResult<(Market, User)> {
+    pub async fn create_market(&self, params: CreateMarketParams) -> DbResult<(Market, User)> {
         let now = Utc::now();
         let market_id = Uuid::new_v4();
         let admin_id = Uuid::new_v4();
 
         // Use custom invite code if provided, otherwise generate one
         // Note: Custom codes must be unique and 6 characters uppercase alphanumeric
-        let invite_code = custom_invite_code
+        let invite_code = params
+            .custom_invite_code
             .filter(|code| {
                 code.len() == 6
                     && code.chars().all(|c| {
                         c.is_ascii_alphanumeric() && (c.is_ascii_uppercase() || c.is_ascii_digit())
                     })
             })
-            .unwrap_or_else(|| generate_invite_code());
+            .unwrap_or_else(generate_invite_code);
 
         let market = Market {
             id: market_id,
-            name,
+            name: params.name,
             status: MarketStatus::Draft,
             created_by: admin_id,
             opens_at: now,
-            closes_at: now + chrono::Duration::hours(duration_hours),
-            starting_balance,
+            closes_at: now + chrono::Duration::hours(params.duration_hours),
+            starting_balance: params.starting_balance,
             invite_code,
             created_at: now,
         };
@@ -57,10 +60,10 @@ impl<D: Database> CazinoService<D> {
         let admin = User {
             id: admin_id,
             market_id,
-            device_id: admin_device_id,
-            display_name: admin_name,
-            avatar: admin_avatar,
-            balance: starting_balance,
+            device_id: params.admin_device_id,
+            display_name: params.admin_name,
+            avatar: params.admin_avatar,
+            balance: params.starting_balance,
             is_admin: true,
             joined_at: now,
         };
@@ -113,6 +116,7 @@ impl<D: Database> CazinoService<D> {
         description: String,
         initial_odds: String,
         opening_wager: i64,
+        hide_from_subject: bool,
     ) -> DbResult<Bet> {
         let market = self.db.get_market(market_id).await?;
         let creator = self.db.get_user(creator_id).await?;
@@ -135,6 +139,7 @@ impl<D: Database> CazinoService<D> {
             status: BetStatus::Active,
             yes_pool,
             no_pool,
+            hide_from_subject,
             created_at: Utc::now(),
             resolved_at: None,
         };
@@ -328,6 +333,17 @@ impl<D: Database> CazinoService<D> {
         self.db
             .update_market_status(market_id, MarketStatus::Closed)
             .await
+    }
+
+    /// Delete a market and all associated data (admin only)
+    pub async fn delete_market(&self, market_id: Uuid, admin_id: Uuid) -> DbResult<()> {
+        let admin = self.db.get_user(admin_id).await?;
+
+        if !admin.is_admin {
+            return Err(crate::db::DbError::Constraint("Admin only".to_string()));
+        }
+
+        self.db.delete_market(market_id).await
     }
 
     /// Resolve a market (all bets resolved, final state)

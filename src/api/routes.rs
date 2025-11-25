@@ -8,7 +8,7 @@ use crate::api::models::{
 use crate::api::websocket::{broadcast, BroadcastTx};
 use crate::db::Database;
 use crate::domain::models::{BetView, Market};
-use crate::service::CazinoService;
+use crate::service::{CazinoService, CreateMarketParams};
 use axum::{
     extract::{Path, State},
     http::StatusCode,
@@ -39,15 +39,15 @@ pub async fn create_market<D: Database + 'static>(
 
     let (market, user) = state
         .service
-        .create_market(
-            req.name.clone(),
-            device_id,
-            req.admin_name.clone(),
-            "👑".to_string(),
-            req.starting_balance,
-            req.duration_hours,
-            req.invite_code,
-        )
+        .create_market(CreateMarketParams {
+            name: req.name.clone(),
+            admin_device_id: device_id,
+            admin_name: req.admin_name.clone(),
+            admin_avatar: "👑".to_string(),
+            starting_balance: req.starting_balance,
+            duration_hours: req.duration_hours,
+            custom_invite_code: req.invite_code,
+        })
         .await?;
 
     let invite_code = market.invite_code.clone();
@@ -197,6 +197,22 @@ pub async fn close_market<D: Database + 'static>(
     Ok(StatusCode::OK)
 }
 
+/// Delete market (admin only)
+pub async fn delete_market<D: Database + 'static>(
+    State(state): State<AppState<D>>,
+    Path((market_id, admin_id)): Path<(Uuid, Uuid)>,
+) -> Result<StatusCode, ApiError> {
+    tracing::info!("🗑️ Admin {} deleting market {}", admin_id, market_id);
+
+    state.service.delete_market(market_id, admin_id).await?;
+
+    tracing::info!("✅ Market {} deleted", market_id);
+
+    broadcast(&state.broadcast_tx, WsMessage::MarketDeleted { market_id });
+
+    Ok(StatusCode::OK)
+}
+
 // ===== Bet Routes =====
 
 /// Get all bets in a market (filtered for viewing user)
@@ -229,6 +245,7 @@ pub async fn create_bet<D: Database + 'static>(
             req.description.clone(),
             req.initial_odds,
             req.opening_wager,
+            req.hide_from_subject,
         )
         .await?;
 

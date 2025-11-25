@@ -54,6 +54,7 @@ impl SqliteDatabase {
                 status TEXT NOT NULL,
                 yes_pool INTEGER NOT NULL,
                 no_pool INTEGER NOT NULL,
+                hide_from_subject INTEGER NOT NULL DEFAULT 0,
                 created_at TEXT NOT NULL,
                 resolved_at TEXT,
                 FOREIGN KEY (market_id) REFERENCES markets(id),
@@ -234,6 +235,41 @@ impl Database for SqliteDatabase {
         Ok(())
     }
 
+    async fn delete_market(&self, id: Uuid) -> DbResult<()> {
+        let id_str = id.to_string();
+
+        // Delete in order: wagers -> bets -> users -> market
+        sqlx::query(
+            r#"
+            DELETE FROM wagers WHERE bet_id IN (SELECT id FROM bets WHERE market_id = ?)
+            "#,
+        )
+        .bind(&id_str)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| DbError::Internal(e.to_string()))?;
+
+        sqlx::query("DELETE FROM bets WHERE market_id = ?")
+            .bind(&id_str)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| DbError::Internal(e.to_string()))?;
+
+        sqlx::query("DELETE FROM users WHERE market_id = ?")
+            .bind(&id_str)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| DbError::Internal(e.to_string()))?;
+
+        sqlx::query("DELETE FROM markets WHERE id = ?")
+            .bind(&id_str)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| DbError::Internal(e.to_string()))?;
+
+        Ok(())
+    }
+
     async fn create_user(&self, user: User) -> DbResult<User> {
         sqlx::query(
             r#"
@@ -393,8 +429,8 @@ impl Database for SqliteDatabase {
     async fn create_bet(&self, bet: Bet) -> DbResult<Bet> {
         sqlx::query(
             r#"
-            INSERT INTO bets (id, market_id, subject_user_id, created_by, description, initial_odds, status, yes_pool, no_pool, created_at, resolved_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO bets (id, market_id, subject_user_id, created_by, description, initial_odds, status, yes_pool, no_pool, hide_from_subject, created_at, resolved_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             "#,
         )
         .bind(bet.id.to_string())
@@ -406,6 +442,7 @@ impl Database for SqliteDatabase {
         .bind(serialize_bet_status(bet.status))
         .bind(bet.yes_pool)
         .bind(bet.no_pool)
+        .bind(bet.hide_from_subject as i64)
         .bind(bet.created_at.to_rfc3339())
         .bind(bet.resolved_at.map(|d| d.to_rfc3339()))
         .execute(&self.pool)
@@ -432,6 +469,7 @@ impl Database for SqliteDatabase {
             status: deserialize_bet_status(row.get("status")),
             yes_pool: row.get("yes_pool"),
             no_pool: row.get("no_pool"),
+            hide_from_subject: row.get::<i64, _>("hide_from_subject") != 0,
             created_at: chrono::DateTime::parse_from_rfc3339(row.get("created_at"))
                 .unwrap()
                 .into(),
@@ -460,6 +498,7 @@ impl Database for SqliteDatabase {
                 status: deserialize_bet_status(row.get("status")),
                 yes_pool: row.get("yes_pool"),
                 no_pool: row.get("no_pool"),
+                hide_from_subject: row.get::<i64, _>("hide_from_subject") != 0,
                 created_at: chrono::DateTime::parse_from_rfc3339(row.get("created_at"))
                     .unwrap()
                     .into(),
@@ -502,6 +541,7 @@ impl Database for SqliteDatabase {
                 status: deserialize_bet_status(row.get("status")),
                 yes_pool: row.get("yes_pool"),
                 no_pool: row.get("no_pool"),
+                hide_from_subject: row.get::<i64, _>("hide_from_subject") != 0,
                 created_at: chrono::DateTime::parse_from_rfc3339(row.get("created_at"))
                     .unwrap()
                     .into(),
@@ -631,6 +671,7 @@ impl Database for SqliteDatabase {
                 status: deserialize_bet_status(row.get("status")),
                 yes_pool: row.get("yes_pool"),
                 no_pool: row.get("no_pool"),
+                hide_from_subject: row.get::<i64, _>("hide_from_subject") != 0,
                 created_at: chrono::DateTime::parse_from_rfc3339(row.get("created_at"))
                     .unwrap()
                     .into(),

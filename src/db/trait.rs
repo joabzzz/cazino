@@ -43,6 +43,8 @@ pub trait Database: DatabaseMarker {
 
     async fn update_market_status(&self, id: Uuid, status: MarketStatus) -> DbResult<()>;
 
+    async fn delete_market(&self, id: Uuid) -> DbResult<()>;
+
     // ===== User Operations =====
 
     async fn create_user(&self, user: User) -> DbResult<User>;

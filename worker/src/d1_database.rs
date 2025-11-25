@@ -152,6 +152,7 @@ struct BetRow {
     status: String,
     yes_pool: i64,
     no_pool: i64,
+    hide_from_subject: i64,
     created_at: String,
     resolved_at: Option<String>,
 }
@@ -168,6 +169,7 @@ impl BetRow {
             status: deserialize_bet_status(&self.status),
             yes_pool: self.yes_pool,
             no_pool: self.no_pool,
+            hide_from_subject: self.hide_from_subject != 0,
             created_at: chrono::DateTime::parse_from_rfc3339(&self.created_at)
                 .unwrap()
                 .into(),
@@ -277,6 +279,50 @@ impl Database for D1Database {
             .run()
             .await
             .map_err(|e| DbError::Internal(format!("Failed to update market status: {}", e)))?;
+
+        Ok(())
+    }
+
+    async fn delete_market(&self, id: Uuid) -> DbResult<()> {
+        let id_str = id.to_string();
+
+        // Delete wagers for bets in this market
+        self.db
+            .prepare(
+                "DELETE FROM wagers WHERE bet_id IN (SELECT id FROM bets WHERE market_id = ?1)",
+            )
+            .bind(&[JsValue::from_str(&id_str)])
+            .map_err(|e| DbError::Internal(format!("Failed to bind: {}", e)))?
+            .run()
+            .await
+            .map_err(|e| DbError::Internal(format!("Failed to delete wagers: {}", e)))?;
+
+        // Delete bets
+        self.db
+            .prepare("DELETE FROM bets WHERE market_id = ?1")
+            .bind(&[JsValue::from_str(&id_str)])
+            .map_err(|e| DbError::Internal(format!("Failed to bind: {}", e)))?
+            .run()
+            .await
+            .map_err(|e| DbError::Internal(format!("Failed to delete bets: {}", e)))?;
+
+        // Delete users
+        self.db
+            .prepare("DELETE FROM users WHERE market_id = ?1")
+            .bind(&[JsValue::from_str(&id_str)])
+            .map_err(|e| DbError::Internal(format!("Failed to bind: {}", e)))?
+            .run()
+            .await
+            .map_err(|e| DbError::Internal(format!("Failed to delete users: {}", e)))?;
+
+        // Delete market
+        self.db
+            .prepare("DELETE FROM markets WHERE id = ?1")
+            .bind(&[JsValue::from_str(&id_str)])
+            .map_err(|e| DbError::Internal(format!("Failed to bind: {}", e)))?
+            .run()
+            .await
+            .map_err(|e| DbError::Internal(format!("Failed to delete market: {}", e)))?;
 
         Ok(())
     }
@@ -407,8 +453,8 @@ impl Database for D1Database {
         self.db
             .prepare(
                 r#"
-                INSERT INTO bets (id, market_id, subject_user_id, created_by, description, initial_odds, status, yes_pool, no_pool, created_at, resolved_at)
-                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
+                INSERT INTO bets (id, market_id, subject_user_id, created_by, description, initial_odds, status, yes_pool, no_pool, hide_from_subject, created_at, resolved_at)
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)
                 "#,
             )
             .bind(&[
@@ -421,6 +467,7 @@ impl Database for D1Database {
                 JsValue::from_str(&serialize_bet_status(bet.status)),
                 JsValue::from_f64(bet.yes_pool as f64),
                 JsValue::from_f64(bet.no_pool as f64),
+                JsValue::from_f64(if bet.hide_from_subject { 1.0 } else { 0.0 }),
                 JsValue::from_str(&bet.created_at.to_rfc3339()),
                 bet.resolved_at.map(|d| JsValue::from_str(&d.to_rfc3339())).unwrap_or(JsValue::null()),
             ])

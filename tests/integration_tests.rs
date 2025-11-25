@@ -4,7 +4,7 @@
 /// These test full user workflows end-to-end
 use cazino::db::SqliteDatabase;
 use cazino::domain::models::{BetStatus, MarketStatus, Side};
-use cazino::service::CazinoService;
+use cazino::service::{CazinoService, CreateMarketParams};
 use std::sync::Arc;
 
 /// Helper to create an in-memory test database
@@ -20,15 +20,15 @@ async fn test_full_market_lifecycle() {
 
     // 1. Create market
     let (market, admin) = service
-        .create_market(
-            "Test Market".to_string(),
-            "admin-device".to_string(),
-            "Admin".to_string(),
-            "👑".to_string(),
-            1000,
-            24,
-            None,
-        )
+        .create_market(CreateMarketParams {
+            name: "Test Market".to_string(),
+            admin_device_id: "admin-device".to_string(),
+            admin_name: "Admin".to_string(),
+            admin_avatar: "👑".to_string(),
+            starting_balance: 1000,
+            duration_hours: 24,
+            custom_invite_code: None,
+        })
         .await
         .unwrap();
 
@@ -76,6 +76,7 @@ async fn test_full_market_lifecycle() {
             "Bob will fall asleep".to_string(),
             "1:1".to_string(),
             100,
+            false,
         )
         .await
         .unwrap();
@@ -130,15 +131,15 @@ async fn test_hidden_bet_mechanics() {
 
     // Create market and users
     let (market, admin) = service
-        .create_market(
-            "Hidden Bet Test".to_string(),
-            "admin-device".to_string(),
-            "Admin".to_string(),
-            "👑".to_string(),
-            1000,
-            24,
-            None,
-        )
+        .create_market(CreateMarketParams {
+            name: "Hidden Bet Test".to_string(),
+            admin_device_id: "admin-device".to_string(),
+            admin_name: "Admin".to_string(),
+            admin_avatar: "👑".to_string(),
+            starting_balance: 1000,
+            duration_hours: 24,
+            custom_invite_code: None,
+        })
         .await
         .unwrap();
 
@@ -173,6 +174,7 @@ async fn test_hidden_bet_mechanics() {
             "Bob secret bet".to_string(),
             "1:1".to_string(),
             100,
+            true, // hidden from subject
         )
         .await
         .unwrap();
@@ -215,15 +217,15 @@ async fn test_parimutuel_payout_calculation() {
     let service = setup_test_db().await;
 
     let (market, admin) = service
-        .create_market(
-            "Payout Test".to_string(),
-            "admin-device".to_string(),
-            "Admin".to_string(),
-            "👑".to_string(),
-            2000,
-            24,
-            None,
-        )
+        .create_market(CreateMarketParams {
+            name: "Payout Test".to_string(),
+            admin_device_id: "admin-device".to_string(),
+            admin_name: "Admin".to_string(),
+            admin_avatar: "👑".to_string(),
+            starting_balance: 2000,
+            duration_hours: 24,
+            custom_invite_code: None,
+        })
         .await
         .unwrap();
 
@@ -268,6 +270,7 @@ async fn test_parimutuel_payout_calculation() {
             "Test bet".to_string(),
             "1:1".to_string(),
             100,
+            false,
         )
         .await
         .unwrap();
@@ -333,15 +336,15 @@ async fn test_insufficient_balance() {
     let service = setup_test_db().await;
 
     let (market, admin) = service
-        .create_market(
-            "Balance Test".to_string(),
-            "admin-device".to_string(),
-            "Admin".to_string(),
-            "👑".to_string(),
-            100, // Small starting balance
-            24,
-            None,
-        )
+        .create_market(CreateMarketParams {
+            name: "Balance Test".to_string(),
+            admin_device_id: "admin-device".to_string(),
+            admin_name: "Admin".to_string(),
+            admin_avatar: "👑".to_string(),
+            starting_balance: 100, // Small starting balance
+            duration_hours: 24,
+            custom_invite_code: None,
+        })
         .await
         .unwrap();
 
@@ -366,6 +369,7 @@ async fn test_insufficient_balance() {
             "Expensive bet".to_string(),
             "1:1".to_string(),
             200, // More than her 100 balance
+            false,
         )
         .await;
 
@@ -378,15 +382,15 @@ async fn test_probability_chart_tracking() {
     let service = setup_test_db().await;
 
     let (market, admin) = service
-        .create_market(
-            "Chart Test".to_string(),
-            "admin-device".to_string(),
-            "Admin".to_string(),
-            "👑".to_string(),
-            1000,
-            24,
-            None,
-        )
+        .create_market(CreateMarketParams {
+            name: "Chart Test".to_string(),
+            admin_device_id: "admin-device".to_string(),
+            admin_name: "Admin".to_string(),
+            admin_avatar: "👑".to_string(),
+            starting_balance: 1000,
+            duration_hours: 24,
+            custom_invite_code: None,
+        })
         .await
         .unwrap();
 
@@ -410,6 +414,7 @@ async fn test_probability_chart_tracking() {
             "Chart bet".to_string(),
             "1:1".to_string(),
             100,
+            false,
         )
         .await
         .unwrap();
@@ -449,15 +454,15 @@ async fn test_admin_only_actions() {
     let service = setup_test_db().await;
 
     let (market, admin) = service
-        .create_market(
-            "Admin Test".to_string(),
-            "admin-device".to_string(),
-            "Admin".to_string(),
-            "👑".to_string(),
-            1000,
-            24,
-            None,
-        )
+        .create_market(CreateMarketParams {
+            name: "Admin Test".to_string(),
+            admin_device_id: "admin-device".to_string(),
+            admin_name: "Admin".to_string(),
+            admin_avatar: "👑".to_string(),
+            starting_balance: 1000,
+            duration_hours: 24,
+            custom_invite_code: None,
+        })
         .await
         .unwrap();
 
@@ -481,6 +486,7 @@ async fn test_admin_only_actions() {
             "Admin bet".to_string(),
             "1:1".to_string(),
             100,
+            false,
         )
         .await
         .unwrap();
@@ -514,15 +520,15 @@ async fn test_returning_user() {
     let service = setup_test_db().await;
 
     let (market, _admin) = service
-        .create_market(
-            "Returning User Test".to_string(),
-            "admin-device".to_string(),
-            "Admin".to_string(),
-            "👑".to_string(),
-            1000,
-            24,
-            None,
-        )
+        .create_market(CreateMarketParams {
+            name: "Returning User Test".to_string(),
+            admin_device_id: "admin-device".to_string(),
+            admin_name: "Admin".to_string(),
+            admin_avatar: "👑".to_string(),
+            starting_balance: 1000,
+            duration_hours: 24,
+            custom_invite_code: None,
+        })
         .await
         .unwrap();
 
@@ -559,15 +565,15 @@ async fn test_multiple_bets_same_subject() {
     let service = setup_test_db().await;
 
     let (market, admin) = service
-        .create_market(
-            "Multiple Bets Test".to_string(),
-            "admin-device".to_string(),
-            "Admin".to_string(),
-            "👑".to_string(),
-            1000,
-            24,
-            None,
-        )
+        .create_market(CreateMarketParams {
+            name: "Multiple Bets Test".to_string(),
+            admin_device_id: "admin-device".to_string(),
+            admin_name: "Admin".to_string(),
+            admin_avatar: "👑".to_string(),
+            starting_balance: 1000,
+            duration_hours: 24,
+            custom_invite_code: None,
+        })
         .await
         .unwrap();
 
@@ -592,6 +598,7 @@ async fn test_multiple_bets_same_subject() {
             "Alice will be late".to_string(),
             "1:1".to_string(),
             50,
+            true, // hidden from subject
         )
         .await
         .unwrap();
@@ -604,6 +611,7 @@ async fn test_multiple_bets_same_subject() {
             "Alice will spill drink".to_string(),
             "1:1".to_string(),
             50,
+            true, // hidden from subject
         )
         .await
         .unwrap();

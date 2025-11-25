@@ -178,6 +178,7 @@ mod tests {
             status: BetStatus::Active,
             yes_pool: 0,
             no_pool: 0,
+            hide_from_subject: false,
             created_at: Utc::now(),
             resolved_at: None,
         }

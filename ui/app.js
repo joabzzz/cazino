@@ -377,6 +377,68 @@ async function openMarket() {
   }
 }
 
+async function closeMarket() {
+  if (
+    !confirm("Are you sure you want to close this market? Betting will end.")
+  ) {
+    return;
+  }
+
+  try {
+    await apiCall(`/markets/${state.market.id}/close/${state.user.id}`, {
+      method: "POST",
+    });
+
+    await loadMarket();
+    alert("Market closed successfully!");
+  } catch (error) {
+    showError(error.message);
+  }
+}
+
+async function deleteMarket() {
+  if (
+    !confirm(
+      "Are you sure you want to DELETE this market? This cannot be undone!",
+    )
+  ) {
+    return;
+  }
+
+  if (
+    !confirm(
+      "This will delete ALL bets, wagers, and user data. Are you REALLY sure?",
+    )
+  ) {
+    return;
+  }
+
+  try {
+    await apiCall(`/markets/${state.market.id}/delete/${state.user.id}`, {
+      method: "POST",
+    });
+
+    // Disconnect websocket
+    if (state.ws) {
+      state.ws.close();
+      state.ws = null;
+    }
+
+    // Clear state
+    state.market = null;
+    state.user = null;
+    state.inviteCode = null;
+    state.bets = [];
+    state.users = [];
+    state.leaderboard = [];
+
+    alert("Market deleted successfully!");
+    showScreen("landing-screen");
+  } catch (error) {
+    showError(error.message);
+  }
+}
+
 async function loadUsers() {
   try {
     const result = await apiCall(`/markets/${state.market.id}/leaderboard`);
@@ -405,6 +467,7 @@ async function createBet() {
   const description = document.getElementById("bet-description").value;
   const odds = "1:1"; // Default to even odds, actual odds determined by betting pool
   const wager = parseInt(document.getElementById("opening-wager").value);
+  const hideFromSubject = document.getElementById("hide-from-subject").checked;
 
   // Parse @username from description
   const mentionMatch = description.match(/@([a-zA-Z0-9_]+)/);
@@ -432,6 +495,7 @@ async function createBet() {
         description,
         initial_odds: odds,
         opening_wager: wager,
+        hide_from_subject: hideFromSubject,
       }),
     });
 
@@ -546,6 +610,10 @@ function showMarket() {
     document
       .querySelectorAll(".admin-section")
       .forEach((el) => (el.style.display = "block"));
+    // Show Admin tab for admins
+    document.getElementById("admin-tab-btn").style.display = "block";
+  } else {
+    document.getElementById("admin-tab-btn").style.display = "none";
   }
 
   loadBets();
@@ -1051,6 +1119,20 @@ document
 
 document.getElementById("open-market-btn").addEventListener("click", () => {
   openMarket();
+});
+
+document
+  .getElementById("delete-market-lobby-btn")
+  .addEventListener("click", () => {
+    deleteMarket();
+  });
+
+document.getElementById("close-market-btn").addEventListener("click", () => {
+  closeMarket();
+});
+
+document.getElementById("delete-market-btn").addEventListener("click", () => {
+  deleteMarket();
 });
 
 document.getElementById("create-bet-btn").addEventListener("click", () => {

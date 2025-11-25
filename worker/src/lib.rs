@@ -6,7 +6,7 @@ mod room;
 
 use cazino::api::models::*;
 use cazino::domain::models::BetView;
-use cazino::service::CazinoService;
+use cazino::service::{CazinoService, CreateMarketParams};
 use d1_database::D1Database;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -58,6 +58,7 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
     let svc13 = service.clone();
     let svc14 = service.clone();
     let svc15 = service.clone();
+    let svc16 = service.clone();
 
     router
         // Market routes
@@ -89,6 +90,13 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
             move |_req, ctx| {
                 let service = svc6.clone();
                 async move { handle_close_market(ctx, service).await }
+            },
+        )
+        .post_async(
+            "/api/markets/:market_id/delete/:admin_id",
+            move |_req, ctx| {
+                let service = svc16.clone();
+                async move { handle_delete_market(ctx, service).await }
             },
         )
         // Bet routes
@@ -200,15 +208,15 @@ async fn handle_create_market(
         .unwrap_or_else(|| Uuid::new_v4().to_string());
 
     let (market, user) = service
-        .create_market(
-            body.name,
-            device_id,
-            body.admin_name,
-            "👑".to_string(),
-            body.starting_balance,
-            body.duration_hours,
-            body.invite_code,
-        )
+        .create_market(CreateMarketParams {
+            name: body.name,
+            admin_device_id: device_id,
+            admin_name: body.admin_name,
+            admin_avatar: "👑".to_string(),
+            starting_balance: body.starting_balance,
+            duration_hours: body.duration_hours,
+            custom_invite_code: body.invite_code,
+        })
         .await
         .map_err(|e| Error::RustError(e.to_string()))?;
 
@@ -356,6 +364,31 @@ async fn handle_close_market(
     Response::empty().and_then(|r| add_cors_headers(r))
 }
 
+async fn handle_delete_market(
+    ctx: RouteContext<()>,
+    service: Arc<CazinoService<D1Database>>,
+) -> Result<Response> {
+    let market_id = parse_uuid(ctx.param("market_id").unwrap())?;
+    let admin_id = parse_uuid(ctx.param("admin_id").unwrap())?;
+
+    service
+        .delete_market(market_id, admin_id)
+        .await
+        .map_err(|e| Error::RustError(e.to_string()))?;
+
+    // Broadcast market deleted event
+    let broadcast_msg = serde_json::json!({
+        "type": "market_deleted",
+        "data": {
+            "market_id": market_id
+        }
+    });
+
+    let _ = broadcast_to_market(&ctx, &market_id.to_string(), broadcast_msg).await;
+
+    Response::empty().and_then(|r| add_cors_headers(r))
+}
+
 async fn handle_get_bets(
     ctx: RouteContext<()>,
     service: Arc<CazinoService<D1Database>>,
@@ -388,6 +421,7 @@ async fn handle_create_bet(
             body.description,
             body.initial_odds,
             body.opening_wager,
+            body.hide_from_subject,
         )
         .await
         .map_err(|e| Error::RustError(e.to_string()))?;

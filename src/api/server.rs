@@ -75,6 +75,10 @@ fn create_router<D: Database + Clone + Send + Sync + 'static>(state: AppState<D>
             "/api/markets/:market_id/close/:admin_id",
             post(routes::close_market::<D>),
         )
+        .route(
+            "/api/markets/:market_id/delete/:admin_id",
+            post(routes::delete_market::<D>),
+        )
         // Bet routes
         .route(
             "/api/markets/:market_id/bets/:user_id",

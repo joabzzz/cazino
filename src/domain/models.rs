@@ -71,8 +71,9 @@ pub struct Bet {
     pub description: String,   // "Dad falls asleep during movie"
     pub initial_odds: String,  // e.g., "3:1" - for display only
     pub status: BetStatus,
-    pub yes_pool: i64, // Total coins bet on YES
-    pub no_pool: i64,  // Total coins bet on NO
+    pub yes_pool: i64,           // Total coins bet on YES
+    pub no_pool: i64,            // Total coins bet on NO
+    pub hide_from_subject: bool, // If true, subject can't see this bet until resolved
     pub created_at: DateTime<Utc>,
     pub resolved_at: Option<DateTime<Utc>>,
 }
@@ -143,7 +144,12 @@ pub struct BetView {
 impl Bet {
     /// Convert to a view model for a specific viewing user
     pub fn to_view(&self, viewing_user_id: Uuid) -> BetView {
-        let is_hidden = self.subject_user_id == viewing_user_id
+        // Hide from subject only if:
+        // 1. The bet is marked as hide_from_subject by creator
+        // 2. The viewing user IS the subject
+        // 3. The bet is not yet resolved (reveal on resolution)
+        let is_hidden = self.hide_from_subject
+            && self.subject_user_id == viewing_user_id
             && self.status != BetStatus::ResolvedYes
             && self.status != BetStatus::ResolvedNo
             && self.status != BetStatus::Challenged;

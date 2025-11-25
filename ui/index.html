@@ -223,9 +223,18 @@
                     style="display: none"
                 >
                     <h3>Admin Controls</h3>
-                    <button id="open-market-btn" class="btn btn-primary">
-                        Open Market
-                    </button>
+                    <div class="button-group">
+                        <button id="open-market-btn" class="btn btn-primary">
+                            Open Market
+                        </button>
+                        <button
+                            id="delete-market-lobby-btn"
+                            class="btn btn-secondary"
+                            style="border-color: #dc3545; color: #dc3545"
+                        >
+                            Delete Market
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -233,10 +242,12 @@
         <!-- Market Screen (Open/Active state) -->
         <div id="market-screen" class="screen">
             <div class="container">
+                <div class="logo-header">
+                    <img src="logo.png" alt="Cazino" class="center-logo" />
+                </div>
                 <div class="header-bar">
                     <div>
                         <div class="market-title">
-                            <img src="logo.png" alt="" class="header-logo" />
                             <h2 id="market-name-display">Market Name</h2>
                         </div>
                         <p class="status">
@@ -266,6 +277,14 @@
                     <button class="tab" data-tab="feed">Feed</button>
                     <button class="tab" data-tab="leaderboard">
                         Leaderboard
+                    </button>
+                    <button
+                        class="tab"
+                        data-tab="admin"
+                        id="admin-tab-btn"
+                        style="display: none"
+                    >
+                        Admin
                     </button>
                 </div>
 
@@ -312,6 +331,37 @@
                         <div id="reveal-list" class="bets-list"></div>
                     </div>
                 </div>
+
+                <!-- Admin Tab -->
+                <div id="admin-tab" class="tab-content">
+                    <div class="section">
+                        <h3>Market Controls</h3>
+                        <p class="hint">Manage this market</p>
+                        <div
+                            class="admin-actions-list"
+                            style="margin-top: 16px"
+                        >
+                            <button
+                                id="close-market-btn"
+                                class="btn btn-secondary"
+                                style="width: 100%; margin-bottom: 12px"
+                            >
+                                Close Market (End Betting)
+                            </button>
+                            <button
+                                id="delete-market-btn"
+                                class="btn btn-secondary"
+                                style="
+                                    width: 100%;
+                                    border-color: #dc3545;
+                                    color: #dc3545;
+                                "
+                            >
+                                Delete Market
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -348,6 +398,23 @@
                             min="1"
                             required
                         />
+                    </div>
+
+                    <div class="form-group checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="hide-from-subject" />
+                            <span>Hide from @subject until resolved</span>
+                        </label>
+                        <small
+                            style="
+                                color: var(--gray-500);
+                                margin-top: 4px;
+                                display: block;
+                            "
+                        >
+                            If checked, the person the bet is about won't see it
+                            until it's resolved
+                        </small>
                     </div>
 
                     <div class="button-group">

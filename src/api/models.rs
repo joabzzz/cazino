@@ -33,6 +33,8 @@ pub struct CreateBetRequest {
     pub description: String,
     pub initial_odds: String,
     pub opening_wager: i64,
+    #[serde(default)]
+    pub hide_from_subject: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -173,6 +175,9 @@ pub enum WsMessage {
         market_id: Uuid,
         status: MarketStatus,
     },
+
+    #[serde(rename = "market_deleted")]
+    MarketDeleted { market_id: Uuid },
 
     #[serde(rename = "pong")]
     Pong,
