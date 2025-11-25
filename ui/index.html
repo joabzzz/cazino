@@ -4,6 +4,27 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Cazino</title>
+        <meta
+            name="description"
+            content="Prediction markets for family gatherings"
+        />
+        <meta name="theme-color" content="#000000" />
+
+        <!-- Favicon -->
+        <link rel="icon" type="image/x-icon" href="favicon.ico" />
+
+        <!-- PWA Manifest -->
+        <link rel="manifest" href="manifest.json" />
+
+        <!-- iOS PWA Support -->
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta
+            name="apple-mobile-web-app-status-bar-style"
+            content="black-translucent"
+        />
+        <meta name="apple-mobile-web-app-title" content="Cazino" />
+        <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+
         <link rel="stylesheet" href="style.css" />
     </head>
     <body>
@@ -106,6 +127,20 @@
         <div id="join-market-screen" class="screen">
             <div class="container">
                 <h2>Join Market</h2>
+
+                <!-- Recent Markets Section -->
+                <div
+                    id="recent-markets"
+                    class="recent-markets-section"
+                    style="display: none"
+                >
+                    <h3>Recent Markets</h3>
+                    <div
+                        id="recent-markets-list"
+                        class="recent-markets-list"
+                    ></div>
+                    <div class="divider-text">or join a new market</div>
+                </div>
 
                 <form id="join-market-form">
                     <div class="form-group">

@@ -58,6 +58,98 @@ function getDeviceFingerprint() {
   return fingerprint;
 }
 
+// ===== Recent Markets Functions =====
+function getRecentMarkets() {
+  const stored = localStorage.getItem("cazino_recent_markets");
+  return stored ? JSON.parse(stored) : [];
+}
+
+function saveRecentMarket(inviteCode, marketName, displayName) {
+  const markets = getRecentMarkets();
+  // Remove existing entry for this invite code if exists
+  const filtered = markets.filter((m) => m.inviteCode !== inviteCode);
+  // Add to front of list
+  filtered.unshift({
+    inviteCode,
+    marketName,
+    displayName,
+    joinedAt: new Date().toISOString(),
+  });
+  // Keep only last 5 markets
+  const trimmed = filtered.slice(0, 5);
+  localStorage.setItem("cazino_recent_markets", JSON.stringify(trimmed));
+}
+
+function renderRecentMarkets() {
+  const container = document.getElementById("recent-markets");
+  const markets = getRecentMarkets();
+
+  if (markets.length === 0) {
+    container.style.display = "none";
+    return;
+  }
+
+  container.style.display = "block";
+  const list = document.getElementById("recent-markets-list");
+  list.innerHTML = markets
+    .map(
+      (market) => `
+      <button class="recent-market-item" data-code="${market.inviteCode}">
+        <div class="recent-market-name">${market.marketName}</div>
+        <div class="recent-market-info">
+          <span class="recent-market-code">${market.inviteCode}</span>
+          <span class="recent-market-user">@${market.displayName}</span>
+        </div>
+      </button>
+    `,
+    )
+    .join("");
+
+  // Add click handlers
+  list.querySelectorAll(".recent-market-item").forEach((item) => {
+    item.addEventListener("click", () => {
+      const code = item.dataset.code;
+      rejoinMarket(code);
+    });
+  });
+}
+
+async function rejoinMarket(inviteCode) {
+  try {
+    const result = await apiCall(`/markets/${inviteCode}/join`, {
+      method: "POST",
+      body: JSON.stringify({
+        display_name: "rejoining", // Will be ignored for existing device
+        avatar: "👤",
+        device_id: getDeviceFingerprint(),
+      }),
+    });
+
+    state.market = result.market;
+    state.user = result.user;
+    state.inviteCode = inviteCode;
+
+    // Update recent markets with potentially new market name
+    saveRecentMarket(inviteCode, state.market.name, state.user.display_name);
+
+    connectWebSocket();
+
+    if (state.market.status === "draft") {
+      showLobby();
+    } else {
+      showMarket();
+    }
+  } catch (error) {
+    // If rejoin fails (market deleted, etc.), remove from recent markets
+    const markets = getRecentMarkets().filter(
+      (m) => m.inviteCode !== inviteCode,
+    );
+    localStorage.setItem("cazino_recent_markets", JSON.stringify(markets));
+    renderRecentMarkets();
+    showError(error.message);
+  }
+}
+
 function showScreen(screenId) {
   document
     .querySelectorAll(".screen")
@@ -233,6 +325,13 @@ async function createMarket() {
     state.user = result.user;
     state.inviteCode = result.invite_code;
 
+    // Save to recent markets
+    saveRecentMarket(
+      result.invite_code,
+      state.market.name,
+      state.user.display_name,
+    );
+
     connectWebSocket();
     showLobby();
   } catch (error) {
@@ -260,6 +359,9 @@ async function joinMarket() {
     state.market = result.market;
     state.user = result.user;
     state.inviteCode = inviteCode;
+
+    // Save to recent markets
+    saveRecentMarket(inviteCode, state.market.name, state.user.display_name);
 
     connectWebSocket();
 
@@ -940,6 +1042,7 @@ document.getElementById("create-market-btn").addEventListener("click", () => {
 });
 
 document.getElementById("join-market-btn").addEventListener("click", () => {
+  renderRecentMarkets();
   showScreen("join-market-screen");
 });
 
