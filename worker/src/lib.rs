@@ -57,6 +57,7 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
     let svc12 = service.clone();
     let svc13 = service.clone();
     let svc14 = service.clone();
+    let svc15 = service.clone();
 
     router
         // Market routes
@@ -126,6 +127,11 @@ async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
         .get_async("/api/users/:user_id/reveal", move |_req, ctx| {
             let service = svc14.clone();
             async move { handle_get_reveal(ctx, service).await }
+        })
+        // Device routes (fingerprint-based)
+        .get_async("/api/devices/:device_id/markets", move |_req, ctx| {
+            let service = svc15.clone();
+            async move { handle_get_device_markets(ctx, service).await }
         })
         // WebSocket route - forward to Durable Object
         .get_async("/ws/:market_id", |req, ctx| async move {
@@ -582,6 +588,42 @@ async fn handle_get_reveal(
     let response = RevealResponse { bets: bet_views };
 
     Response::from_json(&response).and_then(|r| add_cors_headers(r))
+}
+
+async fn handle_get_device_markets(
+    ctx: RouteContext<()>,
+    service: Arc<CazinoService<D1Database>>,
+) -> Result<Response> {
+    let device_id = ctx.param("device_id").unwrap().to_string();
+
+    console_log!("Getting markets for device: {}", device_id);
+
+    let markets = service
+        .get_markets_by_device_id(&device_id)
+        .await
+        .map_err(|e| Error::RustError(e.to_string()))?;
+
+    let market_infos: Vec<DeviceMarketInfo> = markets
+        .into_iter()
+        .map(|(market, user)| DeviceMarketInfo { market, user })
+        .collect();
+
+    let response = DeviceMarketsResponse {
+        markets: market_infos,
+    };
+
+    Response::from_json(&response).and_then(|r| add_cors_headers(r))
+}
+
+#[derive(Debug, serde::Serialize)]
+struct DeviceMarketsResponse {
+    markets: Vec<DeviceMarketInfo>,
+}
+
+#[derive(Debug, serde::Serialize)]
+struct DeviceMarketInfo {
+    market: cazino::domain::models::Market,
+    user: cazino::domain::models::User,
 }
 
 // ===== Helper Functions =====

@@ -373,6 +373,36 @@ impl Database for D1Database {
         Ok(())
     }
 
+    async fn get_markets_by_device_id(&self, device_id: &str) -> DbResult<Vec<(Market, User)>> {
+        // D1 doesn't support complex JOINs well with the current API, so we'll do two queries
+        // First get all users with this device_id
+        let user_results = self
+            .db
+            .prepare("SELECT * FROM users WHERE device_id = ?1 ORDER BY joined_at DESC LIMIT 10")
+            .bind(&[JsValue::from_str(device_id)])
+            .map_err(|e| DbError::Internal(format!("Failed to bind: {}", e)))?
+            .all()
+            .await
+            .map_err(|e| DbError::Internal(format!("Query failed: {}", e)))?;
+
+        let users: Vec<User> = user_results
+            .results::<UserRow>()
+            .map_err(|e| DbError::Internal(format!("Failed to deserialize users: {}", e)))?
+            .into_iter()
+            .map(|row| row.into_user())
+            .collect();
+
+        // Now fetch each market
+        let mut result = Vec::new();
+        for user in users {
+            if let Ok(market) = self.get_market(user.market_id).await {
+                result.push((market, user));
+            }
+        }
+
+        Ok(result)
+    }
+
     async fn create_bet(&self, bet: Bet) -> DbResult<Bet> {
         self.db
             .prepare(
