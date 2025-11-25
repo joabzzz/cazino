@@ -3,7 +3,6 @@ name = "cazino"
 version = "0.1.0"
 edition = "2021"
 
-[dependencies]
 # Web framework
 axum = { version = "0.7", features = ["ws", "macros"] }
 tokio = { version = "1", features = ["full"] }
@@ -19,28 +18,45 @@ serde_json = "1.0"
 # Database
 sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "migrate", "chrono"] }
 
-# Async trait (for database trait)
+[[bin]]
+name = "cazino"
+path = "src/main.rs"
+required-features = ["server"]
+
+[features]
+default = ["server", "sqlite"]
+server = ["axum", "tokio", "tower", "tower-http", "futures", "tokio-stream", "tracing", "tracing-subscriber", "clap"]
+sqlite = ["sqlx", "server"]
+wasm = []  # For WASM targets, removes Send + Sync bounds from Database trait
+
+[dependencies]
+# Always available (core domain logic)
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+uuid = { version = "1.6", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+thiserror = "1.0"
+anyhow = "1.0"
+rand = "0.8"
 async-trait = "0.1"
 
-# Time
-chrono = { version = "0.4", features = ["serde"] }
+# Optional: Web framework (Axum server)
+axum = { version = "0.7", features = ["ws", "macros"], optional = true }
+tokio = { version = "1", features = ["full"], optional = true }
+tower = { version = "0.4", optional = true }
+tower-http = { version = "0.5", features = ["trace", "cors"], optional = true }
+futures = { version = "0.3", optional = true }
+tokio-stream = { version = "0.1", optional = true }
 
-# UUID for IDs
-uuid = { version = "1.6", features = ["v4", "serde"] }
+# Optional: Tracing
+tracing = { version = "0.1", optional = true }
+tracing-subscriber = { version = "0.3", features = ["env-filter"], optional = true }
 
-# Error handling
-anyhow = "1.0"
-thiserror = "1.0"
+# Optional: SQLite database
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "migrate", "chrono"], optional = true }
 
-# Tracing
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-
-# CLI (optional, for REPL)
-clap = { version = "4.4", features = ["derive"] }
-
-# Random (for invite codes)
-rand = "0.8"
+# Optional: CLI
+clap = { version = "4.4", features = ["derive"], optional = true }
 
 [dev-dependencies]
 # Testing
