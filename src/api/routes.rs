@@ -1,5 +1,10 @@
 /// HTTP API routes
-use crate::api::models::*;
+use crate::api::models::{
+    BetResponse, CreateBetRequest, CreateMarketRequest, CreateMarketResponse, DeviceMarketInfo,
+    DeviceMarketsResponse, ErrorResponse, JoinMarketRequest, JoinMarketResponse,
+    LeaderboardResponse, PlaceWagerRequest, ProbabilityChartResponse, ProbabilityPoint,
+    ResolveBetRequest, RevealResponse, UserWithStats, WagerResponse, WsMessage,
+};
 use crate::api::websocket::{broadcast, BroadcastTx};
 use crate::db::Database;
 use crate::domain::models::{BetView, Market};
@@ -389,6 +394,25 @@ pub async fn get_reveal<D: Database + 'static>(
     let bet_views: Vec<BetView> = bets.iter().map(|b| b.to_view(Uuid::nil())).collect();
 
     Ok(Json(RevealResponse { bets: bet_views }))
+}
+
+/// Get all markets a device has joined (for recent markets feature)
+pub async fn get_device_markets<D: Database + 'static>(
+    State(state): State<AppState<D>>,
+    Path(device_id): Path<String>,
+) -> Result<Json<DeviceMarketsResponse>, ApiError> {
+    tracing::info!("📱 Getting markets for device: {}", device_id);
+
+    let markets = state.service.get_markets_by_device_id(&device_id).await?;
+
+    let market_infos: Vec<DeviceMarketInfo> = markets
+        .into_iter()
+        .map(|(market, user)| DeviceMarketInfo { market, user })
+        .collect();
+
+    Ok(Json(DeviceMarketsResponse {
+        markets: market_infos,
+    }))
 }
 
 // ===== Error Handling =====

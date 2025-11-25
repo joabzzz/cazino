@@ -333,6 +333,63 @@ impl Database for SqliteDatabase {
         Ok(())
     }
 
+    async fn get_markets_by_device_id(&self, device_id: &str) -> DbResult<Vec<(Market, User)>> {
+        let rows = sqlx::query(
+            r#"
+            SELECT
+                m.id as market_id, m.name, m.status, m.created_by, m.opens_at, m.closes_at,
+                m.starting_balance, m.invite_code, m.created_at,
+                u.id as user_id, u.market_id as u_market_id, u.device_id, u.display_name,
+                u.avatar, u.balance, u.is_admin, u.joined_at
+            FROM users u
+            JOIN markets m ON u.market_id = m.id
+            WHERE u.device_id = ?
+            ORDER BY u.joined_at DESC
+            LIMIT 10
+            "#,
+        )
+        .bind(device_id)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| DbError::Internal(e.to_string()))?;
+
+        Ok(rows
+            .iter()
+            .map(|row| {
+                let market = Market {
+                    id: Uuid::parse_str(row.get("market_id")).unwrap(),
+                    name: row.get("name"),
+                    status: deserialize_market_status(row.get("status")),
+                    created_by: Uuid::parse_str(row.get("created_by")).unwrap(),
+                    opens_at: chrono::DateTime::parse_from_rfc3339(row.get("opens_at"))
+                        .unwrap()
+                        .into(),
+                    closes_at: chrono::DateTime::parse_from_rfc3339(row.get("closes_at"))
+                        .unwrap()
+                        .into(),
+                    starting_balance: row.get("starting_balance"),
+                    invite_code: row.get("invite_code"),
+                    created_at: chrono::DateTime::parse_from_rfc3339(row.get("created_at"))
+                        .unwrap()
+                        .into(),
+                };
+                let user = User {
+                    id: Uuid::parse_str(row.get("user_id")).unwrap(),
+                    market_id: Uuid::parse_str(row.get("u_market_id")).unwrap(),
+                    device_id: row.get("device_id"),
+                    display_name: row.get("display_name"),
+                    avatar: row.get("avatar"),
+                    balance: row.get("balance"),
+                    is_admin: row.get::<i64, _>("is_admin") != 0,
+                    joined_at: chrono::DateTime::parse_from_rfc3339(row.get("joined_at"))
+                        .unwrap()
+                        .into(),
+                };
+                (market, user)
+            })
+            .collect())
+    }
+
     async fn create_bet(&self, bet: Bet) -> DbResult<Bet> {
         sqlx::query(
             r#"

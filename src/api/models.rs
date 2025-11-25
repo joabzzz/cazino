@@ -108,6 +108,17 @@ pub struct ErrorResponse {
     pub error: String,
 }
 
+#[derive(Debug, Serialize)]
+pub struct DeviceMarketsResponse {
+    pub markets: Vec<DeviceMarketInfo>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct DeviceMarketInfo {
+    pub market: crate::domain::models::Market,
+    pub user: crate::domain::models::User,
+}
+
 // ===== WebSocket Messages =====
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

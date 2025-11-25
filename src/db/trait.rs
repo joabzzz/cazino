@@ -55,6 +55,9 @@ pub trait Database: DatabaseMarker {
 
     async fn update_user_balance(&self, user_id: Uuid, new_balance: i64) -> DbResult<()>;
 
+    /// Get all markets a device has joined (for recent markets feature)
+    async fn get_markets_by_device_id(&self, device_id: &str) -> DbResult<Vec<(Market, User)>>;
+
     // ===== Bet Operations =====
 
     async fn create_bet(&self, bet: Bet) -> DbResult<Bet>;

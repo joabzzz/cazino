@@ -106,6 +106,11 @@ fn create_router<D: Database + Clone + Send + Sync + 'static>(state: AppState<D>
         )
         // Reveal route
         .route("/api/users/:user_id/reveal", get(routes::get_reveal::<D>))
+        // Device routes (fingerprint-based)
+        .route(
+            "/api/devices/:device_id/markets",
+            get(routes::get_device_markets::<D>),
+        )
         // Health check
         .route("/health", get(health_check))
         .with_state(state)

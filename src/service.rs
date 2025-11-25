@@ -359,6 +359,11 @@ impl<D: Database> CazinoService<D> {
     pub async fn get_bet(&self, bet_id: Uuid) -> DbResult<Bet> {
         self.db.get_bet(bet_id).await
     }
+
+    /// Get all markets a device has joined (for recent markets feature)
+    pub async fn get_markets_by_device_id(&self, device_id: &str) -> DbResult<Vec<(Market, User)>> {
+        self.db.get_markets_by_device_id(device_id).await
+    }
 }
 
 /// Generate a random 6-character invite code
