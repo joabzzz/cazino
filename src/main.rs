@@ -26,17 +26,25 @@ enum Commands {
     /// Run HTTP + WebSocket API server
     Serve {
         /// Port to listen on
-        #[arg(short, long, default_value = "3000")]
+        #[arg(short, long, env = "CAZINO_PORT", default_value_t = 3000)]
         port: u16,
 
         /// Database URL
-        #[arg(short, long, default_value = "sqlite://cazino.db?mode=rwc")]
+        #[arg(
+            short,
+            long,
+            env = "CAZINO_DATABASE_URL",
+            default_value = "sqlite://cazino.db?mode=rwc"
+        )]
         database: String,
     },
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Load environment variables from .env when available for local dev convenience
+    let _ = dotenvy::dotenv();
+
     // Initialize tracing with better formatting
     tracing_subscriber::fmt()
         .with_target(false)

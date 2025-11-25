@@ -99,6 +99,27 @@ h3 {
     letter-spacing: -0.03em;
 }
 
+.logo-img {
+    width: 128px;
+    height: 128px;
+    margin-bottom: var(--spacing-md);
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+}
+
+.market-title {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.header-logo {
+    width: 32px;
+    height: 32px;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+}
+
 .tagline {
     font-size: 16px;
     color: var(--gray-500);
@@ -332,6 +353,39 @@ input::placeholder {
     margin-top: var(--spacing-sm);
 }
 
+/* ===== Join Code Inline (Market Screen) ===== */
+.join-code-inline {
+    font-size: 13px;
+    color: var(--gray-600);
+    font-weight: 500;
+    margin-top: var(--spacing-xs);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.code-text {
+    font-family: "Courier New", monospace;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--black);
+}
+
+.copy-icon {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 4px;
+    opacity: 0.6;
+    transition: opacity var(--transition);
+    line-height: 1;
+}
+
+.copy-icon:hover {
+    opacity: 1;
+}
+
 /* ===== Sections ===== */
 .section {
     margin-bottom: var(--spacing-xl);
@@ -470,7 +524,8 @@ input::placeholder {
 .bet-status-badge {
     font-size: 11px;
     padding: 4px 8px;
-    background: var(--gray-200);
+    background: transparent;
+    border: 1px solid var(--gray-200);
     color: var(--gray-700);
     border-radius: 2px;
     text-transform: uppercase;
@@ -479,17 +534,16 @@ input::placeholder {
 }
 
 .bet-status-badge.pending {
-    background: var(--gray-300);
+    color: var(--gray-500);
 }
 
 .bet-status-badge.active {
-    background: var(--black);
-    color: var(--white);
+    color: var(--black);
+    border-color: var(--black);
 }
 
 .bet-status-badge.resolved {
-    background: var(--gray-500);
-    color: var(--white);
+    color: var(--gray-600);
 }
 
 .bet-pools {
@@ -561,15 +615,29 @@ input::placeholder {
     font-weight: 500;
 }
 
-.leaderboard-balance {
-    font-weight: 600;
-    font-size: 16px;
+.leaderboard-values {
+    text-align: right;
+}
+
+.leaderboard-total {
+    font-weight: 700;
+    font-size: 18px;
+    margin-bottom: var(--spacing-xs);
+}
+
+.leaderboard-breakdown {
+    display: flex;
+    gap: var(--spacing-sm);
+    justify-content: flex-end;
+    font-size: 12px;
+}
+
+.leaderboard-cash {
+    color: var(--gray-500);
 }
 
 .leaderboard-profit {
-    font-size: 13px;
-    color: var(--gray-500);
-    margin-left: var(--spacing-sm);
+    font-weight: 500;
 }
 
 .leaderboard-profit.positive {
@@ -584,24 +652,38 @@ input::placeholder {
 .feed-list {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-md);
+    gap: var(--spacing-sm);
+    max-height: 400px;
+    overflow-y: auto;
+    padding: var(--spacing-md);
+    background: var(--white);
 }
 
 .feed-item {
-    padding: var(--spacing-md);
-    border: 1px solid var(--gray-200);
-    border-radius: var(--border-radius);
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-bottom: 1px solid var(--gray-100);
     animation: fadeInUp 0.3s ease-out;
 }
 
+.feed-item:last-child {
+    border-bottom: none;
+}
+
 .feed-item-header {
-    font-weight: 600;
+    font-weight: 400;
     margin-bottom: var(--spacing-xs);
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.feed-item-header .user-mention,
+.feed-item-header .amount {
+    font-weight: 600;
 }
 
 .feed-item-details {
-    font-size: 13px;
-    color: var(--gray-600);
+    font-size: 12px;
+    color: var(--gray-500);
     margin-top: var(--spacing-xs);
 }
 
@@ -621,6 +703,41 @@ input::placeholder {
 .feed-masked {
     color: var(--gray-400);
     font-style: italic;
+}
+
+/* ===== Feed Ticker ===== */
+.feed-ticker {
+    background: var(--white);
+    color: var(--black);
+    padding: var(--spacing-sm) 0;
+    margin: calc(-1 * var(--spacing-lg)) calc(-1 * var(--spacing-lg))
+        var(--spacing-lg);
+    overflow: hidden;
+    position: relative;
+    white-space: nowrap;
+    border-top: 1px solid var(--gray-200);
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.ticker-content {
+    display: inline-block;
+    padding-left: 100%;
+    animation: ticker 30s linear infinite;
+    font-size: 13px;
+}
+
+@keyframes ticker {
+    0% {
+        transform: translateX(100%);
+    }
+    100% {
+        transform: translateX(-100%);
+    }
+}
+
+.ticker-content .user-mention,
+.ticker-content .amount {
+    font-weight: 600;
 }
 
 /* ===== Modal ===== */
@@ -656,10 +773,110 @@ input::placeholder {
     width: 100%;
     max-height: 90vh;
     overflow-y: auto;
+    position: relative;
 }
 
 .modal-content h3 {
     margin-bottom: var(--spacing-lg);
+}
+
+.modal-large {
+    max-width: 700px;
+}
+
+.modal-close {
+    position: absolute;
+    top: var(--spacing-md);
+    right: var(--spacing-md);
+    background: none;
+    border: none;
+    font-size: 32px;
+    line-height: 1;
+    cursor: pointer;
+    color: var(--gray-500);
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color var(--transition);
+}
+
+.modal-close:hover {
+    color: var(--black);
+}
+
+/* ===== Bet Detail Modal ===== */
+.bet-detail-graph {
+    margin: var(--spacing-xl) 0;
+    padding: var(--spacing-lg);
+    background: var(--gray-100);
+    border-radius: var(--border-radius);
+}
+
+.probability-display {
+    text-align: center;
+    margin-bottom: var(--spacing-lg);
+}
+
+.probability-number {
+    font-size: 48px;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: var(--spacing-xs);
+}
+
+.probability-label {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--gray-500);
+    font-weight: 600;
+}
+
+.bet-detail-pools {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-md);
+    margin: var(--spacing-xl) 0;
+}
+
+.pool-detail {
+    padding: var(--spacing-lg);
+    border: 2px solid var(--gray-200);
+    border-radius: var(--border-radius);
+    text-align: center;
+}
+
+.pool-detail-header {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--gray-500);
+    font-weight: 600;
+    margin-bottom: var(--spacing-sm);
+}
+
+.pool-detail-amount {
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.bet-detail-actions {
+    display: flex;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-xl);
+}
+
+.bet-detail-actions .btn {
+    flex: 1;
+}
+
+#bet-detail-admin-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    flex: 2;
 }
 
 /* ===== Wager Pools Display ===== */

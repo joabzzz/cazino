@@ -1,0 +1,18 @@
+{
+  "name": "cazino-e2e",
+  "private": true,
+  "scripts": {
+    "test:ui": "scripts/test_ui.sh",
+    "test:ui:headed": "PWDEBUG=1 scripts/test_ui.sh",
+    "test:websocket": "npx playwright test tests/e2e/websocket.spec.ts -c tests/playwright.config.ts",
+    "test:websocket:headed": "npx playwright test tests/e2e/websocket.spec.ts -c tests/playwright.config.ts --headed",
+    "test:cloudflare": "npx playwright test tests/e2e/cloudflare.spec.ts -c tests/playwright.config.ts",
+    "playwright:install": "playwright install chromium"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1"
+  },
+  "dependencies": {
+    "ws": "^8.18.3"
+  }
+}

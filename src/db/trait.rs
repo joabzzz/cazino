@@ -20,8 +20,19 @@ pub enum DbError {
 
 pub type DbResult<T> = Result<T, DbError>;
 
-#[async_trait]
-pub trait Database: Send + Sync {
+#[cfg(feature = "wasm")]
+pub trait DatabaseMarker {}
+#[cfg(feature = "wasm")]
+impl<T> DatabaseMarker for T {}
+
+#[cfg(not(feature = "wasm"))]
+pub trait DatabaseMarker: Send + Sync {}
+#[cfg(not(feature = "wasm"))]
+impl<T: Send + Sync> DatabaseMarker for T {}
+
+#[cfg_attr(feature = "wasm", async_trait(?Send))]
+#[cfg_attr(not(feature = "wasm"), async_trait)]
+pub trait Database: DatabaseMarker {
     // ===== Market Operations =====
 
     async fn create_market(&self, market: Market) -> DbResult<Market>;

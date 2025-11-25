@@ -45,6 +45,11 @@ The UI uses vanilla JavaScript (no build step required). To make changes:
 2. Refresh your browser to see changes
 3. No compilation or bundling needed
 
+## Configuration & Deployment
+
+- `config.js` exposes a `window.CAZINO_CONFIG` object. In development it stays empty so the UI talks to the origin that served it (usually `cargo run -- serve`).
+- `scripts/build_ui.sh` copies the contents of `ui/` into `dist/` and rewrites `config.js` with the values from `PUBLIC_API_BASE_URL` and `PUBLIC_WS_URL`. Use this script as the build command for Cloudflare Pages or any static host so secrets remain out of Git.
+
 ## API Integration
 
 All API calls are made to `http://localhost:3000/api/*`

@@ -25,13 +25,22 @@ impl<D: Database> CazinoService<D> {
         admin_avatar: String,
         starting_balance: i64,
         duration_hours: i64,
+        custom_invite_code: Option<String>,
     ) -> DbResult<(Market, User)> {
         let now = Utc::now();
         let market_id = Uuid::new_v4();
         let admin_id = Uuid::new_v4();
 
-        // Generate a short invite code
-        let invite_code = generate_invite_code();
+        // Use custom invite code if provided, otherwise generate one
+        // Note: Custom codes must be unique and 6 characters uppercase alphanumeric
+        let invite_code = custom_invite_code
+            .filter(|code| {
+                code.len() == 6
+                    && code.chars().all(|c| {
+                        c.is_ascii_alphanumeric() && (c.is_ascii_uppercase() || c.is_ascii_digit())
+                    })
+            })
+            .unwrap_or_else(|| generate_invite_code());
 
         let market = Market {
             id: market_id,

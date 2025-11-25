@@ -41,6 +41,7 @@ pub async fn create_market<D: Database + 'static>(
             "👑".to_string(),
             req.starting_balance,
             req.duration_hours,
+            req.invite_code,
         )
         .await?;
 

@@ -124,6 +124,7 @@ Examples:
                 "👑".to_string(),
                 1000,
                 hours,
+                None,
             )
             .await
         {

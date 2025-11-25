@@ -1,0 +1,29 @@
+# Cloudflare Pages configuration for Cazino UI
+# Copy this to wrangler.toml and customize for your account
+
+name = "cazino"
+compatibility_date = "2024-11-01"
+
+# Pages configuration
+pages_build_output_dir = "dist"
+
+# Build settings (can also be set in Cloudflare dashboard)
+[build]
+command = "./scripts/build_ui.sh"
+
+# Production environment variables
+# These are PUBLIC and injected into the built UI at deploy time
+[env.production]
+[env.production.vars]
+PUBLIC_API_BASE_URL = "https://yourdomain.com/api"
+PUBLIC_WS_URL = "wss://yourdomain.com/ws"
+
+# Preview/staging environment
+[env.preview]
+[env.preview.vars]
+PUBLIC_API_BASE_URL = "https://preview.yourdomain.com/api"
+PUBLIC_WS_URL = "wss://preview.yourdomain.com/ws"
+
+# For local development with wrangler pages dev, create .dev.vars:
+# PUBLIC_API_BASE_URL=http://localhost:3000/api
+# PUBLIC_WS_URL=ws://localhost:3000/ws

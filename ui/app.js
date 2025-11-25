@@ -1,7 +1,37 @@
 // Cazino Client Application
 
-const API_BASE = "http://localhost:3000/api";
-const WS_URL = "ws://localhost:3000/ws";
+const runtimeConfig = window.CAZINO_CONFIG || {};
+const httpOrigin = window.location.origin;
+const wsOrigin = `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}`;
+
+function resolveBaseUrl(value, fallbackPath) {
+  if (!value) {
+    return `${httpOrigin}${fallbackPath}`;
+  }
+
+  if (value.startsWith("http://") || value.startsWith("https://")) {
+    return value.replace(/\/$/, "");
+  }
+
+  const normalized = value.startsWith("/") ? value : `/${value}`;
+  return `${httpOrigin}${normalized}`.replace(/\/$/, "");
+}
+
+function resolveWsUrl(value, fallbackPath) {
+  if (!value) {
+    return `${wsOrigin}${fallbackPath}`;
+  }
+
+  if (value.startsWith("ws://") || value.startsWith("wss://")) {
+    return value;
+  }
+
+  const normalized = value.startsWith("/") ? value : `/${value}`;
+  return `${wsOrigin}${normalized}`;
+}
+
+const API_BASE = resolveBaseUrl(runtimeConfig.apiBase, "/api");
+const WS_URL = resolveWsUrl(runtimeConfig.wsUrl, "/ws");
 
 // ===== State Management =====
 const state = {
@@ -14,6 +44,9 @@ const state = {
   ws: null,
   currentBetId: null,
 };
+
+// Expose state to window for testing
+window.state = state;
 
 // ===== Utility Functions =====
 function getDeviceFingerprint() {
@@ -45,7 +78,7 @@ function showError(message) {
 }
 
 function formatBalance(balance) {
-  return `Z$${balance.toLocaleString()}`;
+  return `$${balance.toLocaleString()}`;
 }
 
 // ===== API Functions =====
@@ -83,7 +116,14 @@ function connectWebSocket() {
     state.ws.close();
   }
 
-  state.ws = new WebSocket(WS_URL);
+  if (!state.market || !state.market.id) {
+    console.error("Cannot connect WebSocket: no market ID");
+    return;
+  }
+
+  const wsUrl = `${WS_URL}/${state.market.id}`;
+  console.log("Connecting to WebSocket:", wsUrl);
+  state.ws = new WebSocket(wsUrl);
 
   state.ws.onopen = () => {
     console.log("WebSocket connected");
@@ -126,7 +166,17 @@ function handleWebSocketMessage(message) {
       loadUsers();
       break;
 
+    case "market_opened":
+      // Market has been opened, transition from lobby to market view
+      loadMarket();
+      showMarket();
+      break;
+
     case "bet_created":
+      loadBets();
+      break;
+
+    case "bet_approved":
       loadBets();
       break;
 
@@ -272,7 +322,7 @@ async function loadBets() {
 
 async function createBet() {
   const description = document.getElementById("bet-description").value;
-  const odds = document.getElementById("bet-odds").value;
+  const odds = "1:1"; // Default to even odds, actual odds determined by betting pool
   const wager = parseInt(document.getElementById("opening-wager").value);
 
   // Parse @username from description
@@ -294,7 +344,7 @@ async function createBet() {
   }
 
   try {
-    await apiCall(`/markets/${state.market.id}/bets/${state.user.id}/create`, {
+    await apiCall(`/markets/${state.market.id}/bets/${state.user.id}`, {
       method: "POST",
       body: JSON.stringify({
         subject_user_id: subjectUser.id,
@@ -409,6 +459,7 @@ function showMarket() {
   document.getElementById("user-balance").textContent = formatBalance(
     state.user.balance,
   );
+  document.getElementById("market-invite-code").textContent = state.inviteCode;
 
   if (state.user.is_admin) {
     document
@@ -491,14 +542,7 @@ function renderBets() {
 
                 <div class="bet-actions">
                     <button class="btn btn-small" onclick="openWagerModal('${bet.id}')">Place Wager</button>
-                    ${
-                      state.user.is_admin
-                        ? `
-                        <button class="btn btn-small" onclick="resolveBet('${bet.id}', 'YES')">Resolve YES</button>
-                        <button class="btn btn-small" onclick="resolveBet('${bet.id}', 'NO')">Resolve NO</button>
-                    `
-                        : ""
-                    }
+                    <button class="btn btn-small" onclick="openBetDetailView('${bet.id}')">View Details</button>
                 </div>
             `
                 : ""
@@ -517,21 +561,32 @@ function renderLeaderboard() {
     return;
   }
 
-  list.innerHTML = state.leaderboard
-    .map(
-      (item) => `
+  // Sort by total value (balance + profit) descending
+  const sortedLeaderboard = [...state.leaderboard].sort((a, b) => {
+    const totalA = a.user.balance + a.profit;
+    const totalB = b.user.balance + b.profit;
+    return totalB - totalA;
+  });
+
+  list.innerHTML = sortedLeaderboard
+    .map((item, index) => {
+      const totalValue = item.user.balance + item.profit;
+      return `
         <div class="leaderboard-item">
-            <div class="leaderboard-rank">#${item.rank}</div>
+            <div class="leaderboard-rank">#${index + 1}</div>
             <div class="leaderboard-name">@${item.user.display_name}</div>
-            <div>
-                <span class="leaderboard-balance">${formatBalance(item.user.balance)}</span>
-                <span class="leaderboard-profit ${item.profit >= 0 ? "positive" : "negative"}">
-                    ${item.profit >= 0 ? "+" : ""}${formatBalance(item.profit)}
-                </span>
+            <div class="leaderboard-values">
+                <div class="leaderboard-total">${formatBalance(totalValue)}</div>
+                <div class="leaderboard-breakdown">
+                    <span class="leaderboard-cash" title="Cash on hand">${formatBalance(item.user.balance)}</span>
+                    <span class="leaderboard-profit ${item.profit >= 0 ? "positive" : "negative"}" title="Profit/Loss from bets">
+                        ${item.profit >= 0 ? "+" : ""}${formatBalance(item.profit)}
+                    </span>
+                </div>
             </div>
         </div>
-    `,
-    )
+    `;
+    })
     .join("");
 }
 
@@ -615,6 +670,7 @@ function renderFeed() {
 
   if (feedEvents.length === 0) {
     list.innerHTML = '<div class="empty-state">No activity yet</div>';
+    renderTicker([]);
     return;
   }
 
@@ -624,7 +680,7 @@ function renderFeed() {
         return `
         <div class="feed-item">
           <div class="feed-item-header">
-            ${event.creator} placed ${formatBalance(event.amount)} on ${event.description.includes("[Hidden") ? '<span class="feed-masked">[Hidden bet]</span>' : event.description}
+            ${highlightMentionsAndAmounts(event.creator + " placed " + formatBalance(event.amount) + " on " + (event.description && event.description.includes("[Hidden") ? '<span class="feed-masked">[Hidden bet]</span>' : event.description || ""))}
           </div>
           <div class="feed-item-details">${formatTimestamp(event.timestamp)}</div>
         </div>
@@ -632,8 +688,8 @@ function renderFeed() {
       } else if (event.type === "bet_resolved") {
         return `
         <div class="feed-item">
-          <div class="feed-item-header" style="font-weight: 700;">
-            ${getUserName(event.bet.created_by)} validated ${event.description} - ${event.outcome}
+          <div class="feed-item-header">
+            ${highlightMentionsAndAmounts(getUserName(event.bet.created_by) + " validated " + event.description + " - " + event.outcome)}
           </div>
           <div class="feed-item-details">${formatTimestamp(event.timestamp)}</div>
           ${renderWinnings(event.bet)}
@@ -642,6 +698,55 @@ function renderFeed() {
       }
     })
     .join("");
+
+  // Update ticker
+  renderTicker(feedEvents.slice(0, 5));
+}
+
+function highlightMentionsAndAmounts(text) {
+  // Highlight @mentions
+  text = text.replace(
+    /@([a-zA-Z0-9_]+)/g,
+    '<span class="user-mention">@$1</span>',
+  );
+  // Highlight amounts
+  text = text.replace(/\$[\d,]+/g, '<span class="amount">$&</span>');
+  return text;
+}
+
+function renderTicker(feedEvents) {
+  const ticker = document.getElementById("ticker-content");
+
+  if (feedEvents.length === 0) {
+    ticker.innerHTML = "No recent activity";
+    return;
+  }
+
+  const tickerItems = feedEvents
+    .map((event) => {
+      if (event.type === "bet_created") {
+        return highlightMentionsAndAmounts(
+          event.creator +
+            " placed " +
+            formatBalance(event.amount) +
+            " on " +
+            (event.description.includes("[Hidden")
+              ? "[Hidden bet]"
+              : event.description),
+        );
+      } else if (event.type === "bet_resolved") {
+        return highlightMentionsAndAmounts(
+          getUserName(event.bet.created_by) +
+            " validated " +
+            event.description +
+            " - " +
+            event.outcome,
+        );
+      }
+    })
+    .join(" • ");
+
+  ticker.innerHTML = tickerItems + " • " + tickerItems; // Duplicate for seamless loop
 }
 
 function renderWinnings(bet) {
@@ -680,6 +785,134 @@ function calculateProbability(yesPool, noPool) {
   return yesPool / total;
 }
 
+function openBetDetailView(betId) {
+  state.currentBetId = betId;
+  const bet = state.bets.find((b) => b.id === betId);
+
+  document.getElementById("bet-detail-title").textContent = bet.description;
+
+  // Hide description element if no resolution criteria
+  const descElement = document.getElementById("bet-detail-description");
+  if (bet.resolution_criteria && bet.resolution_criteria.trim()) {
+    descElement.textContent = bet.resolution_criteria;
+    descElement.style.display = "block";
+  } else {
+    descElement.style.display = "none";
+  }
+
+  const probability = calculateProbability(bet.yes_pool, bet.no_pool);
+  document.getElementById("bet-detail-prob").textContent =
+    `${(probability * 100).toFixed(1)}%`;
+
+  document.getElementById("bet-detail-yes-pool").textContent = formatBalance(
+    bet.yes_pool,
+  );
+  document.getElementById("bet-detail-no-pool").textContent = formatBalance(
+    bet.no_pool,
+  );
+
+  // Show admin actions if user is admin
+  if (state.user.is_admin) {
+    document.getElementById("bet-detail-admin-actions").style.display = "flex";
+  }
+
+  // Draw the odds graph
+  drawOddsGraph(bet.yes_pool, bet.no_pool);
+
+  showModal("bet-detail-modal");
+}
+
+function drawOddsGraph(yesPool, noPool) {
+  const canvas = document.getElementById("bet-detail-chart");
+  const ctx = canvas.getContext("2d");
+
+  // Clear canvas
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const total = yesPool + noPool;
+  const yesPercent = total === 0 ? 0.5 : yesPool / total;
+  const noPercent = 1 - yesPercent;
+
+  // Draw horizontal bar chart
+  const width = canvas.width;
+  const height = canvas.height;
+  const barHeight = 60;
+  const yPosition = (height - barHeight) / 2;
+
+  // Draw YES bar (left side)
+  ctx.fillStyle = "#000000";
+  const yesBarWidth = width * yesPercent;
+  ctx.fillRect(0, yPosition, yesBarWidth, barHeight);
+
+  // Draw NO bar (right side)
+  ctx.fillStyle = "#6a6a6a";
+  const noBarWidth = width * noPercent;
+  ctx.fillRect(yesBarWidth, yPosition, noBarWidth, barHeight);
+
+  // Draw labels on bars
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "14px Inter";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  // YES label and percentage
+  if (yesPercent > 0.15) {
+    ctx.fillText("YES", yesBarWidth / 2, yPosition + barHeight / 2 - 10);
+    ctx.font = "16px Inter";
+    ctx.fillText(
+      `${(yesPercent * 100).toFixed(1)}%`,
+      yesBarWidth / 2,
+      yPosition + barHeight / 2 + 10,
+    );
+  } else if (yesPercent > 0) {
+    // If bar too small, draw outside
+    ctx.fillStyle = "#000000";
+    ctx.textAlign = "left";
+    ctx.fillText(
+      `YES ${(yesPercent * 100).toFixed(1)}%`,
+      yesBarWidth + 10,
+      yPosition + barHeight / 2,
+    );
+  }
+
+  // NO label and percentage
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "14px Inter";
+  ctx.textAlign = "center";
+  if (noPercent > 0.15) {
+    ctx.fillText(
+      "NO",
+      yesBarWidth + noBarWidth / 2,
+      yPosition + barHeight / 2 - 10,
+    );
+    ctx.font = "16px Inter";
+    ctx.fillText(
+      `${(noPercent * 100).toFixed(1)}%`,
+      yesBarWidth + noBarWidth / 2,
+      yPosition + barHeight / 2 + 10,
+    );
+  } else if (noPercent > 0) {
+    // If bar too small, draw outside
+    ctx.fillStyle = "#6a6a6a";
+    ctx.textAlign = "right";
+    ctx.fillText(
+      `NO ${(noPercent * 100).toFixed(1)}%`,
+      yesBarWidth - 10,
+      yPosition + barHeight / 2,
+    );
+  }
+}
+
+function openWagerModalFromDetail() {
+  closeModal("bet-detail-modal");
+  openWagerModal(state.currentBetId);
+}
+
+function resolveBetFromDetail(outcome) {
+  closeModal("bet-detail-modal");
+  resolveBet(state.currentBetId, outcome);
+}
+
 function openWagerModal(betId) {
   state.currentBetId = betId;
   const bet = state.bets.find((b) => b.id === betId);
@@ -687,8 +920,12 @@ function openWagerModal(betId) {
   document.getElementById("wager-bet-title").textContent = bet.description;
   document.getElementById("wager-bet-description").textContent =
     bet.resolution_criteria;
-  document.getElementById("wager-yes-pool").textContent = bet.yes_pool;
-  document.getElementById("wager-no-pool").textContent = bet.no_pool;
+  document.getElementById("wager-yes-pool").textContent = formatBalance(
+    bet.yes_pool,
+  );
+  document.getElementById("wager-no-pool").textContent = formatBalance(
+    bet.no_pool,
+  );
   document.getElementById("wager-yes-prob").textContent =
     `${(calculateProbability(bet.yes_pool, bet.no_pool) * 100).toFixed(1)}%`;
   document.getElementById("wager-no-prob").textContent =
@@ -722,6 +959,13 @@ document.getElementById("copy-invite-btn").addEventListener("click", () => {
   navigator.clipboard.writeText(state.inviteCode);
   alert("Invite code copied to clipboard!");
 });
+
+document
+  .getElementById("copy-market-invite-btn")
+  .addEventListener("click", () => {
+    navigator.clipboard.writeText(state.inviteCode);
+    alert("Invite code copied to clipboard!");
+  });
 
 document.getElementById("open-market-btn").addEventListener("click", () => {
   openMarket();

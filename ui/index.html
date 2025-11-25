@@ -10,6 +10,7 @@
         <!-- Landing Screen -->
         <div id="landing-screen" class="screen active">
             <div class="container">
+                <img src="logo.png" alt="Cazino" class="logo-img" />
                 <h1 class="logo">CAZINO</h1>
                 <p class="tagline">Prediction markets for family gatherings</p>
 
@@ -73,7 +74,7 @@
 
                     <div class="form-group">
                         <label for="starting-balance"
-                            >Starting Balance (Z$)</label
+                            >Starting Balance ($)</label
                         >
                         <input
                             type="number"
@@ -199,13 +200,29 @@
             <div class="container">
                 <div class="header-bar">
                     <div>
-                        <h2 id="market-name-display">Market Name</h2>
+                        <div class="market-title">
+                            <img src="logo.png" alt="" class="header-logo" />
+                            <h2 id="market-name-display">Market Name</h2>
+                        </div>
                         <p class="status">
                             Status: <span id="market-status">Open</span>
                         </p>
+                        <p class="join-code-inline">
+                            Join Code:
+                            <span class="code-text" id="market-invite-code"
+                                >ABC123</span
+                            >
+                            <button
+                                id="copy-market-invite-btn"
+                                class="copy-icon"
+                                title="Copy invite code"
+                            >
+                                📋
+                            </button>
+                        </p>
                     </div>
                     <div class="user-info">
-                        <span id="user-balance">Z$1000</span>
+                        <span id="user-balance">$1000</span>
                     </div>
                 </div>
 
@@ -219,6 +236,10 @@
 
                 <!-- Bets Tab -->
                 <div id="bets-tab" class="tab-content active">
+                    <div class="feed-ticker">
+                        <div class="ticker-content" id="ticker-content"></div>
+                    </div>
+
                     <div class="section">
                         <div class="section-header">
                             <h3>Active Bets</h3>
@@ -284,17 +305,6 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="bet-odds">Initial Odds</label>
-                        <select id="bet-odds" required>
-                            <option value="1:1">1:1 (Even odds)</option>
-                            <option value="2:1">2:1 (Unlikely)</option>
-                            <option value="1:2">1:2 (Likely)</option>
-                            <option value="3:1">3:1 (Very unlikely)</option>
-                            <option value="1:3">1:3 (Very likely)</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
                         <label for="opening-wager">Opening Wager</label>
                         <input
                             type="number"
@@ -318,6 +328,75 @@
                         </button>
                     </div>
                 </form>
+            </div>
+        </div>
+
+        <!-- Bet Detail Modal -->
+        <div id="bet-detail-modal" class="modal">
+            <div class="modal-content modal-large">
+                <button
+                    class="modal-close"
+                    onclick="closeModal('bet-detail-modal')"
+                >
+                    ×
+                </button>
+                <h3 id="bet-detail-title">Bet Title</h3>
+                <p id="bet-detail-description" class="hint"></p>
+
+                <div class="bet-detail-graph">
+                    <div class="probability-display">
+                        <div class="probability-number" id="bet-detail-prob">
+                            50%
+                        </div>
+                        <div class="probability-label">Probability YES</div>
+                    </div>
+                    <canvas
+                        id="bet-detail-chart"
+                        width="400"
+                        height="200"
+                    ></canvas>
+                </div>
+
+                <div class="bet-detail-pools">
+                    <div class="pool-detail">
+                        <div class="pool-detail-header">YES Pool</div>
+                        <div
+                            class="pool-detail-amount"
+                            id="bet-detail-yes-pool"
+                        >
+                            $0
+                        </div>
+                    </div>
+                    <div class="pool-detail">
+                        <div class="pool-detail-header">NO Pool</div>
+                        <div class="pool-detail-amount" id="bet-detail-no-pool">
+                            $0
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bet-detail-actions">
+                    <button
+                        class="btn btn-secondary"
+                        onclick="openWagerModalFromDetail()"
+                    >
+                        Place Wager
+                    </button>
+                    <div id="bet-detail-admin-actions" style="display: none">
+                        <button
+                            class="btn btn-primary"
+                            onclick="resolveBetFromDetail('YES')"
+                        >
+                            Resolve YES
+                        </button>
+                        <button
+                            class="btn btn-primary"
+                            onclick="resolveBetFromDetail('NO')"
+                        >
+                            Resolve NO
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -391,6 +470,7 @@
             </div>
         </div>
 
+        <script src="config.js"></script>
         <script src="app.js"></script>
     </body>
 </html>

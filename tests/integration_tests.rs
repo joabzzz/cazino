@@ -1,3 +1,5 @@
+#![cfg(feature = "sqlite")]
+
 /// Integration tests for Cazino betting engine
 /// These test full user workflows end-to-end
 use cazino::db::SqliteDatabase;
@@ -25,6 +27,7 @@ async fn test_full_market_lifecycle() {
             "👑".to_string(),
             1000,
             24,
+            None,
         )
         .await
         .unwrap();
@@ -134,6 +137,7 @@ async fn test_hidden_bet_mechanics() {
             "👑".to_string(),
             1000,
             24,
+            None,
         )
         .await
         .unwrap();
@@ -218,6 +222,7 @@ async fn test_parimutuel_payout_calculation() {
             "👑".to_string(),
             2000,
             24,
+            None,
         )
         .await
         .unwrap();
@@ -335,6 +340,7 @@ async fn test_insufficient_balance() {
             "👑".to_string(),
             100, // Small starting balance
             24,
+            None,
         )
         .await
         .unwrap();
@@ -379,6 +385,7 @@ async fn test_probability_chart_tracking() {
             "👑".to_string(),
             1000,
             24,
+            None,
         )
         .await
         .unwrap();
@@ -449,6 +456,7 @@ async fn test_admin_only_actions() {
             "👑".to_string(),
             1000,
             24,
+            None,
         )
         .await
         .unwrap();
@@ -513,6 +521,7 @@ async fn test_returning_user() {
             "👑".to_string(),
             1000,
             24,
+            None,
         )
         .await
         .unwrap();
@@ -557,6 +566,7 @@ async fn test_multiple_bets_same_subject() {
             "👑".to_string(),
             1000,
             24,
+            None,
         )
         .await
         .unwrap();

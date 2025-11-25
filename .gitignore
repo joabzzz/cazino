@@ -1,4 +1,49 @@
+# Rust build artifacts
 /target
-cazino.db
-cazino.db-shm
-cazino.db-wal
+Cargo.lock
+
+# Local SQLite databases
+*.db
+*.db-shm
+*.db-wal
+cazino*.db*
+
+# Environment & secret files
+.env
+.env.*
+!.env.example
+.dev.vars
+
+# Node/NPM artifacts
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+.npm/
+.pnpm-store/
+
+# Cloudflare/Wrangler artifacts
+.wrangler/
+.pages/
+dist/
+worker-build/
+wrangler.toml
+.mf/
+
+# Playwright test artifacts
+test-results/
+playwright-report/
+playwright/.cache/
+
+# Logs & OS cruft
+*.log
+.DS_Store
+*.swp
+*.swo
+*~
+
+# IDE files
+.vscode/
+.idea/
+*.iml

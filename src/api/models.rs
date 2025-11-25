@@ -13,6 +13,7 @@ pub struct CreateMarketRequest {
     #[serde(default = "default_starting_balance")]
     pub starting_balance: i64,
     pub device_id: Option<String>,
+    pub invite_code: Option<String>,
 }
 
 fn default_starting_balance() -> i64 {

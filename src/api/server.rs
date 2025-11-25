@@ -4,7 +4,7 @@ use crate::api::websocket;
 use crate::db::Database;
 use crate::service::CazinoService;
 use axum::{
-    extract::{ws::WebSocketUpgrade, State},
+    extract::{ws::WebSocketUpgrade, Path, State},
     response::IntoResponse,
     routing::{get, post},
     Router,
@@ -54,8 +54,8 @@ fn create_router<D: Database + Clone + Send + Sync + 'static>(state: AppState<D>
     Router::new()
         // Serve static UI files
         .nest_service("/", ServeDir::new("ui"))
-        // WebSocket endpoint
-        .route("/ws", get(ws_handler))
+        // WebSocket endpoint (with market_id parameter)
+        .route("/ws/:market_id", get(ws_handler))
         // Market routes
         .route("/api/markets", post(routes::create_market::<D>))
         .route("/api/markets/:market_id", get(routes::get_market::<D>))
@@ -120,8 +120,10 @@ fn create_router<D: Database + Clone + Send + Sync + 'static>(state: AppState<D>
 
 async fn ws_handler<D: Database + Clone + Send + Sync + 'static>(
     ws: WebSocketUpgrade,
+    Path(market_id): Path<String>,
     State(state): State<AppState<D>>,
 ) -> impl IntoResponse {
+    tracing::info!("🔌 WebSocket upgrade requested for market: {}", market_id);
     ws.on_upgrade(move |socket| websocket::handle_socket(socket, state.broadcast_tx))
 }
 
